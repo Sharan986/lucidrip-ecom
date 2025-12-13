@@ -6,19 +6,43 @@ import Image from "next/image";
 import { HiOutlineShoppingBag, HiCheck, HiArrowRight } from "react-icons/hi2";
 import { useCartStore } from "@/store/useCartStore"; 
 import { FeatureItem } from "@/type/FeatureItem";
+import { featuredItems } from "@/data/products";
 
+// --- 1. DEFINE COMPONENT OUTSIDE (Fixes the Error) ---
+interface QuickAddProps {
+  item: FeatureItem;
+  customClass?: string;
+  loadingId: number | null;
+  addedId: number | null;
+  onAdd: (e: React.MouseEvent, item: FeatureItem) => void;
+}
+
+const QuickAddButton = ({ item, customClass, loadingId, addedId, onAdd }: QuickAddProps) => (
+  <button
+    onClick={(e) => onAdd(e, item)}
+    className={`flex items-center justify-center rounded-full shadow-xl transition-all duration-300 z-20 
+      ${addedId === item.id 
+        ? "bg-green-500 text-white scale-110" 
+        : "bg-white text-black hover:bg-black hover:text-white hover:scale-110"
+      }
+      ${customClass}
+    `}
+    title="Add to Cart"
+  >
+      {loadingId === item.id ? (
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+      ) : addedId === item.id ? (
+        <HiCheck className="text-xl" />
+      ) : (
+        <HiOutlineShoppingBag className="text-xl" />
+      )}
+  </button>
+);
+
+// --- MAIN COMPONENT ---
 const FeaturedProductsSection = () => {
-  // 1. Data: We need exactly 5 items (1 Hero + 4 Grid)
-  const allItems: FeatureItem[] = [
-    { id: 1, img: "/Hero/Product1.avif", price: 250, name: "Oversized Street Hoodie", slug: "product-1" }, 
-    { id: 2, img: "/Hero/Product2.avif", price: 200, name: "Classic Beige Tee", slug: "product-2" },
-    { id: 3, img: "/Hero/Product3.avif", price: 180, name: "Urban Cargo Pants", slug: "product-3" },
-    { id: 4, img: "/Hero/Product4.avif", price: 220, name: "Signature Cap", slug: "product-4" },
-    { id: 5, img: "/Hero/Product2.avif", price: 150, name: "Essential White Tee", slug: "product-5" },
-  ];
-
-  const heroProduct = allItems[0];
-  const gridProducts = allItems.slice(1, 5); // Gets items 2, 3, 4, 5
+  const heroProduct = featuredItems[0];
+  const gridProducts = featuredItems.slice(1, 5);
 
   // --- CART LOGIC ---
   const addItem = useCartStore((state) => state.addItem);
@@ -48,34 +72,11 @@ const FeaturedProductsSection = () => {
     }, 500);
   };
 
-  // Reusable Quick Add Button
-  const QuickAddButton = ({ item, customClass }: { item: FeatureItem, customClass?: string }) => (
-    <button
-      onClick={(e) => handleQuickAdd(e, item)}
-      className={`flex items-center justify-center rounded-full shadow-xl transition-all duration-300 z-20 
-        ${addedId === item.id 
-          ? "bg-green-500 text-white scale-110" 
-          : "bg-white text-black hover:bg-black hover:text-white hover:scale-110"
-        }
-        ${customClass}
-      `}
-      title="Add to Cart"
-    >
-        {loadingId === item.id ? (
-          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        ) : addedId === item.id ? (
-          <HiCheck className="text-xl" />
-        ) : (
-          <HiOutlineShoppingBag className="text-xl" />
-        )}
-    </button>
-  );
-
   return (
-    <section className="py-16  max-w-8xl mx-auto">
+    <section className="py-16 max-w-8xl mx-auto">
       
       {/* --- HEADER --- */}
-      <div className="flex flex-col md:flex-row justify-between  mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between mb-8 gap-4">
         <div>
            <h2 className="text-3xl md:text-5xl font-medium text-gray-900 ">
              New Arrivals
@@ -88,12 +89,11 @@ const FeaturedProductsSection = () => {
       </div>
 
       {/* --- LAYOUT CONTAINER --- */}
-   
       <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 h-auto lg:h-[600px]">
         
-       
+        {/* === 1. HERO PRODUCT === */}
         <div className="relative group w-full aspect-[4/5] lg:aspect-auto lg:h-full overflow-hidden rounded-xl bg-gray-100">
-           <Link href={`/product/${heroProduct.id}`} className="block h-full w-full">
+           <Link href={`/product/${heroProduct.slug}`} className="block h-full w-full">
              <Image
                src={heroProduct.img}
                alt={heroProduct.name}
@@ -101,7 +101,6 @@ const FeaturedProductsSection = () => {
                className="object-cover object-center transition-transform duration-1000 group-hover:scale-105"
                priority 
              />
-             {/* Text Overlay */}
              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-6 md:p-8">
                 <span className="bg-white text-black text-xs font-bold px-3 py-1 rounded-full w-fit mb-3">
                   Best Seller
@@ -111,19 +110,22 @@ const FeaturedProductsSection = () => {
              </div>
            </Link>
            
+           {/* Passed props explicitly here */}
            <QuickAddButton 
              item={heroProduct} 
+             loadingId={loadingId}
+             addedId={addedId}
+             onAdd={handleQuickAdd}
              customClass="absolute bottom-6 right-6 w-12 h-12 md:bottom-8 md:right-8 md:w-14 md:h-14 text-2xl" 
            />
         </div>
 
-        {/* === 2. GRID PRODUCTS (2x2 Grid on Mobile & Desktop) === */}
+        {/* === 2. GRID PRODUCTS === */}
         <div className="grid grid-cols-2 gap-4 h-auto lg:h-full">
           {gridProducts.map((item) => (
             <div key={item.id} className="group relative flex flex-col aspect-square lg:aspect-auto lg:h-full bg-gray-50 rounded-xl overflow-hidden">
               
-              {/* Image */}
-              <Link href={`/product/${item.id}`} className="relative block flex-1 overflow-hidden h-full">
+              <Link href={`/product/${item.slug}`} className="relative block flex-1 overflow-hidden h-full">
                 <Image
                   src={item.img}
                   alt={item.name}
@@ -132,16 +134,18 @@ const FeaturedProductsSection = () => {
                   sizes="(max-width: 768px) 50vw, 25vw"
                 />
                 
-                {/* Button: Visible on Mobile (Bottom Right), Hidden on Desktop until Hover */}
+                {/* Passed props explicitly here */}
                 <QuickAddButton 
                   item={item} 
+                  loadingId={loadingId}
+                  addedId={addedId}
+                  onAdd={handleQuickAdd}
                   customClass="absolute bottom-3 right-3 w-10 h-10 lg:translate-y-14 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100" 
                 />
               </Link>
 
-              {/* Info Overlay */}
               <div className="p-3 md:p-4 bg-white/90 backdrop-blur-sm absolute bottom-0 left-0 right-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 lg:static lg:translate-y-0 lg:bg-transparent">
-                 <Link href={`/product/${item.id}`}>
+                 <Link href={`/product/${item.slug}`}>
                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">{item.name}</h3>
                  </Link>
                  <p className="text-xs text-gray-500 font-medium">Rs. {item.price.toLocaleString()}</p>
@@ -153,7 +157,6 @@ const FeaturedProductsSection = () => {
 
       </div>
 
-      {/* --- MOBILE FOOTER BUTTON --- */}
       <div className="mt-10 text-center md:hidden">
          <Link 
            href="/products" 

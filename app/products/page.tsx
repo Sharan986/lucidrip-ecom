@@ -81,7 +81,6 @@ const ProductsList = () => {
     <div className="min-h-screen bg-white">
       
       {/* --- STICKY TOOLBAR (Mobile Optimized) --- */}
-      
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-10 py-3">
           
@@ -109,14 +108,12 @@ const ProductsList = () => {
             {/* RIGHT: Compact Sort Dropdown */}
             <div className="relative pl-4 border-l border-gray-200 shrink-0">
               <div className="relative group">
-                {/* Visual Icon/Text */}
                 <div className="flex items-center gap-1 text-sm font-semibold text-gray-900 cursor-pointer">
                   <span className="hidden sm:inline">Sort</span>
                   <HiAdjustmentsHorizontal className="sm:hidden text-xl" /> 
                   <HiChevronDown className="text-gray-400" />
                 </div>
                 
-                {/* Invisible Select Overlay for perfect mobile interaction */}
                 <select 
                   value={activeSort}
                   onChange={(e) => setActiveSort(e.target.value as SortOption)}
@@ -163,7 +160,8 @@ const ProductsList = () => {
               <div key={item.id} className="group relative flex flex-col">
                 
                 {/* Image Card */}
-                <Link href={`/product/${item.id}`} className="block relative w-full aspect-[3/4] overflow-hidden rounded-xl bg-gray-100 mb-3">
+                {/* 🔴 FIXED: Changed item.id to item.slug */}
+                <Link href={`/product/${item.slug}`} className="block relative w-full aspect-[3/4] overflow-hidden rounded-xl bg-gray-100 mb-3">
                   <Image
                     src={item.img}
                     alt={item.name}
@@ -195,7 +193,8 @@ const ProductsList = () => {
 
                 {/* Info */}
                 <div>
-                  <Link href={`/product/${item.id}`}>
+                  {/* 🔴 FIXED: Changed item.id to item.slug */}
+                  <Link href={`/product/${item.slug}`}>
                     <h3 className="text-sm md:text-base font-medium text-gray-900 line-clamp-1">
                       {item.name}
                     </h3>

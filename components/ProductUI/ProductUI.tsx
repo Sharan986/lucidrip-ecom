@@ -1,72 +1,88 @@
-// components/ProductUI.tsx
+
 "use client";
 
-import React, { useState } from "react";
+import React, { useState} from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useCartStore } from "@/store/useCartStore"; 
+// 1. Import Navigation Hooks
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+
 // Icons
-import { HiOutlineTruck, HiOutlineMinus, HiOutlinePlus, HiCheck } from "react-icons/hi2";
-import { LuLeaf, LuRecycle } from "react-icons/lu"; 
+import { HiOutlineMinus, HiOutlinePlus, HiCheck } from "react-icons/hi2";
 import { GoX, GoPlus } from "react-icons/go";
 
-// 1. Expanded Interface for Backend Data
 export interface Product {
   id: number;
   name: string;
+  slug: string;
   price: number;
   img: string; 
   images?: string[]; 
-  description?: string;
-  // New Backend Fields
-  sizes?: string[];
-  colors?: string[];
+  description: string;
+  sizes: string[];
+  colors: string[];
   inStock?: boolean; 
 }
 
 export default function ProductUI({ product }: { product: Product }) {
+  // --- NAVIGATION HOOKS ---
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   // --- GLOBAL STATE ---
   const addItem = useCartStore((state) => state.addItem);
 
-  // --- DERIVED DATA (Fallbacks for missing backend data) ---
+  // --- DERIVED DATA ---
   const galleryImages = product.images?.length ? product.images : [product.img, product.img, product.img];
-  const availableSizes = product.sizes || ["Small", "Medium", "Large", "XL"];
-  const availableColors = product.colors || ["Black", "White", "Navy"];
-  const isStocked = product.inStock ?? true; // Default to true if not specified
+  const availableSizes = product.sizes; 
+  const availableColors = product.colors;
+  const isStocked = product.inStock ?? true; 
 
-  // --- LOCAL STATE ---
-  const [selectedSize, setSelectedSize] = useState(availableSizes[0]);
-  const [selectedColor, setSelectedColor] = useState(availableColors[0]);
+  // --- STATE FROM URL (Source of Truth) ---
+  // If URL has ?size=L, use "L". Otherwise default to first available size.
+  const selectedSize = searchParams.get("size") || availableSizes[0];
+  const selectedColor = searchParams.get("color") || availableColors[0];
+
+  // --- LOCAL STATE (For other things) ---
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(product.img);
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
-
-  // Loading & Success states
   const [isAdding, setIsAdding] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // --- HANDLERS ---
+  // --- URL UPDATER FUNCTION ---
+  const updateURL = (key: string, value: string) => {
+    // 1. Create a new URLSearchParams object using current params
+    const params = new URLSearchParams(searchParams.toString());
+    
+    // 2. Set the new key-value pair
+    params.set(key, value);
+    
+    // 3. Push the new URL without reloading the page (scroll: false prevents jumping to top)
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
+  // --- HANDLERS ---
   const toggleAccordion = (section: string) => {
     setActiveAccordion(activeAccordion === section ? null : section);
   };
 
   const handleAddToCart = () => {
     if (!isStocked) return;
-
     setIsAdding(true);
 
-    // 1. Add to Zustand Store
     addItem({
       productId: product.id,
       name: product.name,
       price: product.price,
       quantity: quantity,
-      size: selectedSize,
-      color: selectedColor,
+      size: selectedSize, // Uses value from URL
+      color: selectedColor, // Uses value from URL
       img: product.img,
     });
 
-    // 2. Simulate Network Delay
     setTimeout(() => {
       setIsAdding(false);
       setShowSuccess(true);
@@ -75,24 +91,49 @@ export default function ProductUI({ product }: { product: Product }) {
     }, 600);
   };
 
-  // Helper to map color names to CSS hex codes (Optional UI Polish)
   const getColorCode = (name: string) => {
+    const lowerName = name.toLowerCase();
     const map: Record<string, string> = {
-      Black: "#000000",
-      White: "#FFFFFF",
-      Blue: "#3B82F6",
-      Navy: "#1E3A8A",
-      Beige: "#DCC6B6",
-      Green: "#10B981",
-      Red: "#EF4444",
+      black: "#000000",
+      "washed black": "#1F1F1F",
+      charcoal: "#36454F",
+      white: "#FFFFFF",
+      cream: "#FFFDD0",
+      beige: "#F5F5DC",
+      taupe: "#483C32",
+      camel: "#C19A6B",
+      oatmeal: "#E0DCC8",
+      grey: "#808080",
+      "heather grey": "#9AA297",
+      navy: "#000080",
+      blue: "#0000FF",
+      "slate blue": "#6A5ACD",
+      "faded blue": "#778899",
+      green: "#008000",
+      olive: "#808000",
+      sage: "#9DC183",
+      "army green": "#4B5320",
+      "forest green": "#228B22",
+      "neon green": "#39FF14",
+      red: "#FF0000",
+      burgundy: "#800020",
+      pink: "#FFC0CB",
+      brown: "#A52A2A",
+      mustard: "#FFDB58",
+      mint: "#98FF98",
+      "multi-color": "linear-gradient(to right, red, blue, green)",
+      "navy/white": "linear-gradient(to right, navy, white)",
+      "black/grey": "linear-gradient(to right, black, grey)",
+      "blue/red": "linear-gradient(to right, blue, red)",
+      "green/cream": "linear-gradient(to right, green, #FFFDD0)"
     };
-    return map[name] || null;
+    return map[lowerName] || null;
   };
 
   return (
     <div className="flex flex-col lg:flex-row gap-12 relative max-w-7xl mx-auto">
       
-      {/* --- MODERN SUCCESS TOAST --- */}
+      {/* SUCCESS POPUP */}
       {showSuccess && (
         <div className="fixed top-4 right-4 z-[100] w-full max-w-sm transform transition-all duration-500 ease-out translate-y-0 opacity-100">
           <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden p-4 flex gap-4 items-start ring-1 ring-black/5">
@@ -113,19 +154,17 @@ export default function ProductUI({ product }: { product: Product }) {
               </div>
               <p className="text-sm text-gray-600 mt-1 truncate font-medium">{product.name}</p>
               <p className="text-xs text-gray-400 mt-0.5">{selectedSize} | {selectedColor}</p>
-              <a href="/cart" className="mt-3 inline-flex items-center text-xs font-bold text-black uppercase tracking-wide border-b border-black hover:text-gray-600 hover:border-gray-600 transition-all pb-0.5">
+              <Link href="/cart" className="mt-3 inline-flex items-center text-xs font-bold text-black uppercase tracking-wide border-b border-black hover:text-gray-600 hover:border-gray-600 transition-all pb-0.5">
                 View Cart & Checkout
-              </a>
+              </Link>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- LEFT SIDE: Image Gallery --- */}
-      {/* Added 'sticky' so it stays visible while scrolling long descriptions */}
+      {/* LEFT: GALLERY */}
       <div className="w-full lg:w-3/5 flex flex-col-reverse md:flex-row gap-4 lg:sticky lg:top-24 h-fit">
-        
-        {/* Vertical Thumbnails */}
+        {/* Thumbnails */}
         <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-visible scrollbar-hide py-2 md:py-0">
           {galleryImages.map((img, index) => (
             <button 
@@ -140,7 +179,7 @@ export default function ProductUI({ product }: { product: Product }) {
           ))}
         </div>
 
-        {/* Main Active Image */}
+        {/* Active Image */}
         <div className="relative flex-1 bg-gray-50 rounded-3xl overflow-hidden aspect-[4/5] md:aspect-auto md:min-h-[600px] shadow-sm">
            <Image 
              src={activeImage} 
@@ -149,7 +188,6 @@ export default function ProductUI({ product }: { product: Product }) {
              className="object-cover transition-transform duration-700 hover:scale-105 cursor-zoom-in"
              priority
            />
-           {/* Stock Badge on Image */}
            {!isStocked && (
              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur text-black px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm">
                Sold Out
@@ -158,16 +196,14 @@ export default function ProductUI({ product }: { product: Product }) {
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: Product Details --- */}
+      {/* RIGHT: DETAILS */}
       <div className="w-full lg:w-2/5 flex flex-col pt-2">
         
         {/* Header */}
         <div className="mb-8 border-b border-gray-100 pb-8">
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 leading-tight">
-              {product.name}
-            </h1>
-          </div>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 leading-tight mb-4">
+            {product.name}
+          </h1>
           <div className="flex items-center gap-4">
             <p className="text-2xl font-medium text-gray-900">
               ₹{product.price.toLocaleString()}
@@ -184,17 +220,17 @@ export default function ProductUI({ product }: { product: Product }) {
           </div>
         </div>
 
-        {/* Dynamic Description */}
+        {/* Description */}
         <div className="mb-8">
           <p className="text-gray-600 leading-relaxed text-base">
-            {product.description || "Classic design meets modern comfort. This piece is crafted from premium materials, ensuring durability and style for any occasion."}
+            {product.description}
           </p>
         </div>
 
         {/* Selectors Wrapper */}
         <div className="space-y-6 mb-8">
           
-          {/* Size Selector */}
+          {/* SIZE SELECTOR (Updates URL) */}
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Select Size</h3>
@@ -204,7 +240,7 @@ export default function ProductUI({ product }: { product: Product }) {
               {availableSizes.map((size) => (
                 <button
                   key={size}
-                  onClick={() => setSelectedSize(size)}
+                  onClick={() => updateURL("size", size)} // <--- Calls URL Updater
                   disabled={!isStocked}
                   className={`min-w-[4rem] px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 border ${
                     selectedSize === size 
@@ -218,16 +254,16 @@ export default function ProductUI({ product }: { product: Product }) {
             </div>
           </div>
 
-          {/* Color Selector */}
+          {/* COLOR SELECTOR (Updates URL) */}
           <div>
-             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Select Color</h3>
-             <div className="flex flex-wrap gap-3">
-              {availableColors.map((color) => {
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Select Color</h3>
+              <div className="flex flex-wrap gap-3">
+               {availableColors.map((color) => {
                 const colorHex = getColorCode(color);
                 return (
                   <button
                     key={color}
-                    onClick={() => setSelectedColor(color)}
+                    onClick={() => updateURL("color", color)} // <--- Calls URL Updater
                     disabled={!isStocked}
                     className={`group relative px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 border flex items-center gap-2 ${
                       selectedColor === color 
@@ -235,11 +271,13 @@ export default function ProductUI({ product }: { product: Product }) {
                         : "border-gray-200 bg-white hover:border-gray-300"
                     } ${!isStocked && "opacity-50 cursor-not-allowed"}`}
                   >
-                    {/* Color Swatch Circle */}
                     {colorHex && (
                       <span 
                         className="w-4 h-4 rounded-full border border-gray-200 shadow-sm" 
-                        style={{ backgroundColor: colorHex }} 
+                        style={{ 
+                           background: colorHex.includes("gradient") ? colorHex : undefined,
+                           backgroundColor: !colorHex.includes("gradient") ? colorHex : undefined
+                        }} 
                       />
                     )}
                     <span className={selectedColor === color ? "text-black font-semibold" : "text-gray-600"}>
@@ -247,8 +285,8 @@ export default function ProductUI({ product }: { product: Product }) {
                     </span>
                   </button>
                 );
-              })}
-             </div>
+               })}
+              </div>
           </div>
         </div>
 
@@ -292,34 +330,30 @@ export default function ProductUI({ product }: { product: Product }) {
             </button>
         </div>
 
-      
-      
-
-           {/* Accordions */}
-           <div className="divide-y divide-gray-100">
-              {[
-                { id: 'delivery', title: 'Delivery & Returns', content: 'Free standard shipping on orders over $200. Returns accepted within 30 days.' },
-                { id: 'details', title: 'Fabric & Care', content: '100% Organic Cotton. Machine wash cold, tumble dry low.' },
-              ].map((item) => (
-                <div key={item.id} className="py-1">
-                  <button 
-                    onClick={() => toggleAccordion(item.id)}
-                    className="w-full py-4 flex justify-between items-center text-left group"
-                  >
-                    <span className="font-medium text-gray-900 group-hover:text-gray-600 transition-colors">{item.title}</span>
-                    <span className={`text-xl transition-transform duration-300 ${activeAccordion === item.id ? 'rotate-45' : ''}`}>
-                      <GoPlus />
-                    </span>
-                  </button>
-                  <div className={`overflow-hidden transition-all duration-300 ${activeAccordion === item.id ? 'max-h-40 opacity-100 pb-4' : 'max-h-0 opacity-0'}`}>
-                    <p className="text-gray-500 text-sm leading-relaxed">{item.content}</p>
-                  </div>
-                </div>
-              ))}
-           </div>
+        {/* Accordions */}
+        <div className="divide-y divide-gray-100">
+          {[
+            { id: 'delivery', title: 'Delivery & Returns', content: 'Free standard shipping on orders over $200. Returns accepted within 30 days.' },
+            { id: 'details', title: 'Fabric & Care', content: '100% Organic Cotton. Machine wash cold, tumble dry low.' },
+          ].map((item) => (
+            <div key={item.id} className="py-1">
+              <button 
+                onClick={() => toggleAccordion(item.id)}
+                className="w-full py-4 flex justify-between items-center text-left group"
+              >
+                <span className="font-medium text-gray-900 group-hover:text-gray-600 transition-colors">{item.title}</span>
+                <span className={`text-xl transition-transform duration-300 ${activeAccordion === item.id ? 'rotate-45' : ''}`}>
+                  <GoPlus />
+                </span>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ${activeAccordion === item.id ? 'max-h-40 opacity-100 pb-4' : 'max-h-0 opacity-0'}`}>
+                <p className="text-gray-500 text-sm leading-relaxed">{item.content}</p>
+              </div>
+            </div>
+          ))}
         </div>
-
       </div>
-    
+
+    </div>
   );
 }

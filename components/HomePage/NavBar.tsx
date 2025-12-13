@@ -38,7 +38,6 @@ const NavBar = () => {
 
   const navLinks = [
     { name: "Shop", href: "/products" },
-    { name: "New Arrivals", href: "/new" },
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
   ];
@@ -77,7 +76,7 @@ const NavBar = () => {
           <div className="shrink-0">
             <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
               <h1 className="font-serif font-bold text-2xl md:text-3xl tracking-wide text-black">
-                SABINA
+                LUCIDRIP
               </h1>
             </Link>
           </div>
@@ -116,7 +115,7 @@ const NavBar = () => {
             >
               <HiXMark size={28} />
             </button>
-            <span className="font-serif font-bold text-xl tracking-wide">SABINA</span>
+            <span className="font-serif font-bold text-xl tracking-wide">LUCIDRIP</span>
             <div className="w-8" /> {/* Spacer for balance */}
           </div>
 
@@ -141,7 +140,7 @@ const NavBar = () => {
               <Link href="/orders" className="hover:text-black">Track Order</Link>
             </div>
             <p className="text-xs text-gray-300 pt-4 border-t border-gray-100">
-              © 2024 SABINA Store
+              © 2024 LUCIDRIP Store
             </p>
           </div>
 
