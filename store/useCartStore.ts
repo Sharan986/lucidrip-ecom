@@ -1,86 +1,88 @@
-// store/useCartStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware'; // Saves cart to localStorage automatically
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-// 1. Define the Cart Item Type
-export interface CartItem {
-  uniqueId: string; // Helper ID (productId + size + color) to distinguish variants
-  productId: number;
+interface CartItem {
+  productId: number; 
   name: string;
   price: number;
   quantity: number;
+  img: string;
   size: string;
   color: string;
-  img: string;
 }
 
-// 2. Define the Store Actions
 interface CartState {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'uniqueId'>) => void;
-  removeItem: (uniqueId: string) => void;
-  updateQuantity: (uniqueId: string, action: 'increase' | 'decrease') => void;
+  totalPrice: number;
+  
+  // Actions
+  addItem: (item: CartItem) => void;
+  removeItem: (productId: number, size: string, color: string) => void;
+  updateQuantity: (productId: number, size: string, color: string, action: 'increase' | 'decrease') => void;
   clearCart: () => void;
-  getCartTotal: () => number;
+  
+
+  getCartTotal: () => number; 
 }
 
-// 3. Create the Store
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      totalPrice: 0,
 
       addItem: (newItem) => {
-        set((state) => {
-          // Create a unique ID so "Small Black" is different from "Large Blue"
-          const uniqueId = `${newItem.productId}-${newItem.size}-${newItem.color}`;
-          
-          const existingItem = state.items.find((item) => item.uniqueId === uniqueId);
+        const currentItems = get().items;
+        const existingItemIndex = currentItems.findIndex(
+          (item) => item.productId === newItem.productId && item.size === newItem.size && item.color === newItem.color
+        );
 
-          if (existingItem) {
-            // If item exists, just increase quantity
-            return {
-              items: state.items.map((item) =>
-                item.uniqueId === uniqueId
-                  ? { ...item, quantity: item.quantity + newItem.quantity }
-                  : item
-              ),
-            };
-          } else {
-            // If new, add to array
-            return { items: [...state.items, { ...newItem, uniqueId }] };
+        let updatedItems = [...currentItems];
+
+        if (existingItemIndex > -1) {
+          updatedItems[existingItemIndex].quantity += newItem.quantity;
+        } else {
+          updatedItems.push(newItem);
+        }
+
+        // Auto-calculate total
+        const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        set({ items: updatedItems, totalPrice: newTotal });
+      },
+
+      removeItem: (id, size, color) => {
+        const updatedItems = get().items.filter(
+          (item) => !(item.productId === id && item.size === size && item.color === color)
+        );
+        
+        const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        set({ items: updatedItems, totalPrice: newTotal });
+      },
+
+      updateQuantity: (id, size, color, action) => {
+        const currentItems = get().items;
+        
+        const updatedItems = currentItems.map((item) => {
+          if (item.productId === id && item.size === size && item.color === color) {
+            const newQuantity = action === 'increase' ? item.quantity + 1 : item.quantity - 1;
+            return { ...item, quantity: Math.max(1, newQuantity) }; // Prevent 0 quantity
           }
+          return item;
         });
+
+        const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        set({ items: updatedItems, totalPrice: newTotal });
       },
 
-      removeItem: (uniqueId) => {
-        set((state) => ({
-          items: state.items.filter((item) => item.uniqueId !== uniqueId),
-        }));
-      },
-
-      updateQuantity: (uniqueId, action) => {
-        set((state) => ({
-          items: state.items.map((item) => {
-            if (item.uniqueId === uniqueId) {
-              const newQuantity =
-                action === 'increase' ? item.quantity + 1 : item.quantity - 1;
-              // Prevent quantity from going below 1
-              return { ...item, quantity: Math.max(1, newQuantity) };
-            }
-            return item;
-          }),
-        }));
-      },
-
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], totalPrice: 0 }),
 
       getCartTotal: () => {
         return get().items.reduce((total, item) => total + item.price * item.quantity, 0);
       },
     }),
     {
-      name: 'shopping-cart-storage', // Key name in localStorage
+      name: 'lucidrip-cart-storage',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
