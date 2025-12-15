@@ -112,7 +112,7 @@ const AdminSidebar = () => {
 
         {/* Footer / User Profile */}
         <div className="p-4 border-t border-gray-50">
-          <div className="flex items-center gap-3 p-3 rounded-2xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-gray-200 transition-all cursor-pointer group">
+          <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-gray-200 transition-all cursor-pointer group">
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition-transform">
               A

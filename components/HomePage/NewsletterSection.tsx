@@ -79,7 +79,7 @@ export default function NewsletterSection() {
             {/* Interactive Form */}
             <div className="mt-10 max-w-lg">
               {status === "success" ? (
-                <div className="flex items-center gap-3 p-4 bg-green-100 text-green-800 rounded-2xl animate-fade-in">
+                <div className="flex items-center gap-3 p-4 bg-green-100 text-green-800 rounded-xl animate-fade-in">
                   <HiCheckCircle className="text-2xl" />
                   <span className="font-medium">Thanks for subscribing! Check your inbox.</span>
                 </div>

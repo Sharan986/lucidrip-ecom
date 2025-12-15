@@ -136,7 +136,7 @@ export default function ProductUI({ product }: { product: Product }) {
       {/* SUCCESS POPUP */}
       {showSuccess && (
         <div className="fixed top-4 right-4 z-[100] w-full max-w-sm transform transition-all duration-500 ease-out translate-y-0 opacity-100">
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden p-4 flex gap-4 items-start ring-1 ring-black/5">
+          <div className="bg-white border border-gray-100 rounded-xl shadow-2xl overflow-hidden p-4 flex gap-4 items-start ring-1 ring-black/5">
             <div className="relative w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
               <Image src={activeImage} alt="product" fill className="object-cover" />
             </div>
@@ -180,7 +180,7 @@ export default function ProductUI({ product }: { product: Product }) {
         </div>
 
         {/* Active Image */}
-        <div className="relative flex-1 bg-gray-50 rounded-3xl overflow-hidden aspect-[4/5] md:aspect-auto md:min-h-[600px] shadow-sm">
+        <div className="relative flex-1 bg-gray-50 rounded-xl overflow-hidden aspect-[4/5] md:aspect-auto md:min-h-[600px] shadow-sm">
            <Image 
              src={activeImage} 
              alt={product.name} 
@@ -291,7 +291,7 @@ export default function ProductUI({ product }: { product: Product }) {
         </div>
 
         {/* Action Area */}
-        <div className="flex items-center gap-4 mb-10 p-4 rounded-2xl">
+        <div className="flex items-center gap-4 mb-10 p-4 rounded-xl">
             {/* Quantity */}
             <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-6 shadow-sm border border-gray-100">
                 <button 

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-// 1. Removed unused Geist imports to keep file small
 import { Poppins } from 'next/font/google'; 
+import ClientLayout from "@/components/layout/ClientLayout"; // 👈 This handles the Nav & Footer now
 import "./globals.css";
-import NavBar from "@/components/HomePage/NavBar";
-import FooterSection from "@/components/HomePage/FooterSection";
 
 // Configure the font
 const poppins = Poppins({
@@ -13,7 +11,7 @@ const poppins = Poppins({
   variable: '--font-poppins',
 });
 
-// 2. Updated Metadata for SEO/Browser Tab
+// Updated Metadata
 export const metadata: Metadata = {
   title: "LUCIDRIP | Modern Streetwear",
   description: "Premium oversized hoodies, knits, and streetwear essentials.",
@@ -27,9 +25,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={poppins.className}>
-        <NavBar />
-        {children}
-        <FooterSection />
+        
+       
+        <ClientLayout>
+           {children}
+        </ClientLayout>
+        
       </body>
     </html>
   );

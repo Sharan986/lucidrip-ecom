@@ -34,7 +34,7 @@ export default function PaymentSection() {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-10">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-10">
       
       {/* --- Header --- */}
       <div className="mb-8">
@@ -50,7 +50,7 @@ export default function PaymentSection() {
         {/* OPTION 1: COD */}
         <div
           onClick={() => setPaymentMethod("COD")}
-          className={`relative flex items-center gap-5 p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${
+          className={`relative flex items-center gap-5 p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${
             paymentMethod === "COD"
               ? "border-black bg-gray-50"
               : "border-gray-100 hover:border-gray-200"
@@ -73,7 +73,7 @@ export default function PaymentSection() {
         {/* OPTION 2: RAZORPAY */}
         <div
           onClick={() => setPaymentMethod("Razorpay")}
-          className={`relative flex items-center gap-5 p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 group ${
+          className={`relative flex items-center gap-5 p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${
             paymentMethod === "Razorpay"
               ? "border-black bg-gray-50"
               : "border-gray-100 hover:border-gray-200"

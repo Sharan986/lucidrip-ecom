@@ -27,7 +27,7 @@ interface Order {
 
 // --- MOCK DATA (Expanded for Pagination) ---
 const INITIAL_ORDERS: Order[] = [
-  { id: "#ORD-7829", customer: "Arjun Mehta", email: "arjun@gmail.com", date: "Oct 24, 2025", amount: 4299, status: "Pending", items: 3, payment: "Paid" },
+  { id: "#ORD-7829", customer: "Sumit Mehta", email: "Sumit@gmail.com", date: "Oct 24, 2025", amount: 4299, status: "Pending", items: 3, payment: "Paid" },
   { id: "#ORD-7828", customer: "Priya Singh", email: "priya@yahoo.com", date: "Oct 23, 2025", amount: 1499, status: "Shipped", items: 1, payment: "Paid" },
   { id: "#ORD-7827", customer: "Rahul Verma", email: "rahul@outlook.com", date: "Oct 22, 2025", amount: 8999, status: "Delivered", items: 5, payment: "Paid" },
   { id: "#ORD-7826", customer: "Sneha Kapoor", email: "sneha@live.com", date: "Oct 21, 2025", amount: 2100, status: "Cancelled", items: 2, payment: "Refunded" },

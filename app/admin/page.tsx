@@ -48,7 +48,7 @@ const stats = [
 ];
 
 const recentOrders = [
-  { id: "ORD-7829", customer: "Arjun Mehta", amount: "4,299", status: "PENDING", items: 3, date: "OCT 24" },
+  { id: "ORD-7829", customer: "Sumit Mehta", amount: "4,299", status: "PENDING", items: 3, date: "OCT 24" },
   { id: "ORD-7828", customer: "Priya Singh", amount: "1,499", status: "SHIPPED", items: 1, date: "OCT 23" },
   { id: "ORD-7827", customer: "Rahul Verma", amount: "8,999", status: "DELIVERED", items: 5, date: "OCT 22" },
   { id: "ORD-7826", customer: "Sneha Kapoor", amount: "2,100", status: "CANCELLED", items: 2, date: "OCT 21" },

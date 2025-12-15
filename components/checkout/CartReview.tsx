@@ -16,7 +16,7 @@ export default function CartReview() {
   const total = subtotal + shippingCost;
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-10">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-10">
       
       {/* --- Header --- */}
       <div className="flex items-center gap-3 mb-8">
@@ -74,7 +74,7 @@ export default function CartReview() {
       </div>
 
       {/* --- Cost Breakdown --- */}
-      <div className="bg-gray-50 rounded-2xl p-6 mb-8">
+      <div className="bg-gray-50 rounded-xl p-6 mb-8">
           <div className="flex justify-between items-center mb-3 text-gray-600 text-sm">
              <span>Subtotal</span>
              <span className="font-medium text-gray-900">₹{subtotal.toLocaleString()}</span>

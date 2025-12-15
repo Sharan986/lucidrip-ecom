@@ -1,4 +1,3 @@
-// app/cart/page.tsx
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -15,13 +14,14 @@ import {
 } from "react-icons/hi2";
 
 export default function CartPage() {
- 
+  
   const [isMounted, setIsMounted] = useState(false);
   const { items, removeItem, updateQuantity, getCartTotal } = useCartStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []); 
+
   // Prevent rendering until client-side hydration is complete
   if (!isMounted) return null; 
 
@@ -61,9 +61,10 @@ export default function CartPage() {
         {/* --- LEFT: Cart Items List --- */}
         <div className="flex-grow">
           <div className="border-t border-gray-100">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <div 
-                key={item.uniqueId} 
+                // ✅ FIX: Robust Key (Uses uniqueId OR creates one from name/size/color)
+                key={item.uniqueId || `${item.name}-${item.size}-${item.color}-${index}`} 
                 className="flex gap-6 py-8 border-b border-gray-100 last:border-0"
               >
                 {/* Image */}
@@ -140,7 +141,7 @@ export default function CartPage() {
         </div>
 
         {/* --- RIGHT: Order Summary --- */}
-        <div className="w-full lg:w-96 h-fit bg-gray-50 p-6 md:p-8 rounded-3xl">
+        <div className="w-full lg:w-96 h-fit bg-gray-50 p-6 md:p-8 rounded-xl">
           <h2 className="text-xl font-bold mb-6">Order Summary</h2>
           
           <div className="space-y-4 mb-6 border-b border-gray-200 pb-6">
@@ -161,7 +162,6 @@ export default function CartPage() {
             <span>₹{total.toLocaleString()}</span>
           </div>
 
-          {/* Checkout Button (Fixed Nesting) */}
           <Link 
             href="/checkout"
             className="w-full block text-center bg-black text-white py-4 rounded-xl font-medium hover:bg-gray-800 transition shadow-lg hover:shadow-xl hover:-translate-y-0.5"

@@ -38,7 +38,7 @@ interface Customer {
 // --- MOCK DATA ---
 const CUSTOMERS: Customer[] = [
   { 
-    id: "CUST-001", name: "Arjun Mehta", email: "arjun.m@gmail.com", location: "Mumbai, IN", totalOrders: 12, totalSpent: 45200, lastActive: "2 mins ago", joinDate: "2023-11-01", status: "VIP",
+    id: "CUST-001", name: "Sumit Mehta", email: "Sumit.m@gmail.com", location: "Mumbai, IN", totalOrders: 12, totalSpent: 45200, lastActive: "2 mins ago", joinDate: "2023-11-01", status: "VIP",
     history: [
       { id: "ORD-7829", date: "2025-10-24", items: "Heavyweight Tee (x3)", amount: 4299, status: "PENDING" },
       { id: "ORD-7510", date: "2025-09-12", items: "Cargo Pants (x1)", amount: 3500, status: "DELIVERED" },

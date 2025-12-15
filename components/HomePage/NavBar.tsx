@@ -2,7 +2,7 @@
 
 import { FaGripLines } from "react-icons/fa6";
 import { PiShoppingCartSimpleBold } from "react-icons/pi";
-import { HiXMark, HiChevronRight } from "react-icons/hi2"; 
+import { HiXMark, HiChevronRight, HiOutlineUser } from "react-icons/hi2"; // 1. Imported User Icon
 import Link from "next/link";
 import { useCartStore } from "@/store/useCartStore";
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ const NavBar = () => {
     setIsMounted(true);
   }, []);
 
-  // Close mobile menu whenever the route changes (user clicks a link)
+  // Close mobile menu whenever the route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
@@ -81,9 +81,11 @@ const NavBar = () => {
             </Link>
           </div>
 
-          {/* --- RIGHT SECTION: CART --- */}
-          <div className="flex-1 flex items-center justify-end">
-            <Link href="/cart" className="relative p-2 -mr-2 text-gray-700 hover:text-black transition-colors">
+          {/* --- RIGHT SECTION: CART & PROFILE --- */}
+          <div className="flex-1 flex items-center justify-end gap-3 sm:gap-4">
+            
+            {/* Cart Icon */}
+            <Link href="/cart" className="relative p-2 text-gray-700 hover:text-black transition-colors">
               <PiShoppingCartSimpleBold size={24} className="cursor-pointer hover:scale-105 transition-transform" />
               
               {/* Badge */}
@@ -93,13 +95,22 @@ const NavBar = () => {
                 </span>
               )}
             </Link>
+
+            {/* ✅ NEW: Circular Avatar Button */}
+            <Link 
+              href="/account"
+              className="w-9 h-9 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-black hover:text-white hover:border-black transition-all duration-300 shadow-sm"
+              title="My Account"
+            >
+              <HiOutlineUser size={18} />
+            </Link>
+
           </div>
 
         </div>
       </nav>
 
-      {/* --- MOBILE MENU OVERLAY (The "Modern Box") --- */}
-      {/* We use fixed positioning to cover the whole screen */}
+      {/* --- MOBILE MENU OVERLAY --- */}
       <div 
         className={`fixed inset-0 z-50 bg-white transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -116,7 +127,7 @@ const NavBar = () => {
               <HiXMark size={28} />
             </button>
             <span className="font-serif font-bold text-xl tracking-wide">LUCIDRIP</span>
-            <div className="w-8" /> {/* Spacer for balance */}
+            <div className="w-8" />
           </div>
 
           {/* Links List */}
@@ -136,7 +147,9 @@ const NavBar = () => {
           {/* Bottom Footer Area */}
           <div className="mt-auto space-y-6 text-sm text-gray-500">
             <div className="flex flex-col gap-2">
-              <Link href="/account" className="hover:text-black">My Account</Link>
+              <Link href="/account" className="hover:text-black font-semibold flex items-center gap-2">
+                 <HiOutlineUser size={16} /> My Account
+              </Link>
               <Link href="/orders" className="hover:text-black">Track Order</Link>
             </div>
             <p className="text-xs text-gray-300 pt-4 border-t border-gray-100">

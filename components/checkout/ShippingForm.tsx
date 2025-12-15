@@ -80,7 +80,7 @@ export default function ShippingForm() {
     // We wrap the main container in a <form> tag
     <form 
       onSubmit={handleSubmit(onSubmit)} 
-      className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-10"
+      className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-10"
     >
       
       {/* --- Header --- */}
