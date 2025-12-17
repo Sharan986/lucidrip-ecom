@@ -7,282 +7,265 @@ import {
   HiArrowLongRight,
   HiOutlineCube,
   HiOutlineShoppingBag,
+  HiOutlineUsers,
+  HiOutlineBanknotes,
+  HiOutlineBell,
+  HiOutlineClock,
+  HiCheckCircle,
+  HiExclamationCircle
 } from "react-icons/hi2";
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts';
 
 // --- MOCK DATA ---
 const stats = [
   { 
-    label: "TOTAL REVENUE", 
-    value: "4,50,200", 
+    label: "TODAY'S REVENUE", 
+    value: "₹42,500", 
     trend: "+12.5%", 
-    desc: "NET INCOME",
-    isMain: true 
+    desc: "VS YESTERDAY",
+    icon: HiOutlineBanknotes,
+    status: "good"
   },
   { 
-    label: "TOTAL ORDERS", 
-    value: "1,240", 
-    trend: "+8.2%",
-    desc: "PROCESSED"
+    label: "PENDING ORDERS", 
+    value: "12", 
+    trend: "+4",
+    desc: "REQUIRES ACTION",
+    icon: HiOutlineShoppingBag,
+    status: "warning"
   },
   { 
-    label: "AVG. ORDER VALUE", 
-    value: "3,150", 
-    trend: "+2.1%",
-    desc: "PER CUSTOMER"
+    label: "NEW CUSTOMERS", 
+    value: "24", 
+    trend: "+18%",
+    desc: "THIS WEEK",
+    icon: HiOutlineUsers,
+    status: "good"
   },
   { 
-    label: "STOCK LEVEL", 
-    value: "845", 
-    trend: "-14",
-    desc: "UNITS AVAILABLE"
+    label: "LOW STOCK ITEMS", 
+    value: "3", 
+    trend: "-1",
+    desc: "RESTOCK NEEDED",
+    icon: HiOutlineCube,
+    status: "critical"
   },
+];
+
+const recentActivity = [
+  { id: 1, type: "order", text: "New order #ORD-7829 from Sumit Mehta", time: "2 min ago", amount: "₹4,299" },
+  { id: 2, type: "user", text: "New customer registration: Sarah Jenkins", time: "15 min ago", amount: "" },
+  { id: 3, type: "alert", text: "Stock alert: 'Classic Beige Knit' is low", time: "1 hr ago", amount: "3 left" },
+  { id: 4, type: "payment", text: "Payment failed for order #ORD-7826", time: "2 hrs ago", amount: "₹2,100" },
 ];
 
 const recentOrders = [
-  { id: "ORD-7829", customer: "Sumit Mehta", amount: "4,299", status: "PENDING", items: 3, date: "OCT 24" },
-  { id: "ORD-7828", customer: "Priya Singh", amount: "1,499", status: "SHIPPED", items: 1, date: "OCT 23" },
-  { id: "ORD-7827", customer: "Rahul Verma", amount: "8,999", status: "DELIVERED", items: 5, date: "OCT 22" },
-  { id: "ORD-7826", customer: "Sneha Kapoor", amount: "2,100", status: "CANCELLED", items: 2, date: "OCT 21" },
-  { id: "ORD-7825", customer: "Vikram Das", amount: "3,450", status: "PENDING", items: 2, date: "OCT 20" },
-];
-
-const revenueData = [
-  { name: 'OCT 18', value: 12500 },
-  { name: 'OCT 19', value: 18400 },
-  { name: 'OCT 20', value: 15600 },
-  { name: 'OCT 21', value: 9800 },
-  { name: 'OCT 22', value: 24500 },
-  { name: 'OCT 23', value: 19200 },
-  { name: 'OCT 24', value: 28400 },
+  { id: "ORD-7829", customer: "Sumit Mehta", amount: "4,299", status: "PENDING", items: 3, date: "OCT 24", payment: "UPI" },
+  { id: "ORD-7828", customer: "Priya Singh", amount: "1,499", status: "SHIPPED", items: 1, date: "OCT 23", payment: "CC" },
+  { id: "ORD-7827", customer: "Rahul Verma", amount: "8,999", status: "DELIVERED", items: 5, date: "OCT 22", payment: "COD" },
+  { id: "ORD-7826", customer: "Sneha Kapoor", amount: "2,100", status: "CANCELLED", items: 2, date: "OCT 21", payment: "UPI" },
+  { id: "ORD-7825", customer: "Vikram Das", amount: "3,450", status: "PENDING", items: 2, date: "OCT 20", payment: "CC" },
 ];
 
 // --- COMPONENTS ---
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-black text-white p-3 border border-zinc-800 shadow-xl">
-        <p className="text-[10px] font-bold tracking-widest uppercase mb-1">{label}</p>
-        <p className="text-sm font-mono">
-          ₹{payload[0].value.toLocaleString()}
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
-
+// Minimalist Status Dot
 const StatusIndicator = ({ status }: { status: string }) => {
-  const isPending = status === "PENDING";
-  const isShipped = status === "SHIPPED";
-  const isDelivered = status === "DELIVERED";
-  const isCancelled = status === "CANCELLED";
-
+  const styles = {
+    PENDING: "bg-yellow-500",
+    SHIPPED: "bg-blue-500",
+    DELIVERED: "bg-green-500",
+    CANCELLED: "bg-red-500"
+  };
+  
   return (
-    <span className={`
-      inline-flex items-center gap-2 px-3 py-1 text-[10px] font-bold tracking-widest border whitespace-nowrap
-      ${isPending ? "bg-zinc-100 text-zinc-900 border-zinc-200" : ""}
-      ${isShipped ? "bg-zinc-900 text-white border-black" : ""}
-      ${isDelivered ? "bg-white text-zinc-900 border-zinc-300" : ""}
-      ${isCancelled ? "bg-white text-zinc-400 border-zinc-100 line-through" : ""}
-    `}>
-      {status}
-    </span>
+    <div className="flex items-center gap-2">
+      <div className={`w-1.5 h-1.5 rounded-full ${styles[status as keyof typeof styles] || "bg-gray-400"}`} />
+      <span className="text-[10px] font-bold tracking-widest uppercase text-zinc-600">{status}</span>
+    </div>
   );
 };
 
 export default function AdminDashboard() {
   return (
-    <div className="min-h-screen bg-white text-zinc-900 pb-20">
+    <div className="min-h-screen bg-white text-zinc-900 pb-20 font-sans">
       
-      {/* --- TOP BAR --- */}
-      <div className="border-b border-zinc-200">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 h-auto md:h-16 py-4 md:py-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0">
-          <p className="text-xs font-mono text-zinc-400">ADMIN // DASHBOARD</p>
-          <p className="text-xs font-mono text-zinc-900">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
-          </p>
+      {/* --- TOP BAR (Technical) --- */}
+      <div className="border-b border-zinc-200 sticky top-0 bg-white/80 backdrop-blur-md z-20">
+        <div className="max-w-[1800px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+             <div className="w-2 h-2 bg-black animate-pulse"></div>
+             <p className="text-xs font-bold tracking-widest uppercase">Live Dashboard</p>
+          </div>
+          <div className="flex items-center gap-6">
+             <div className="flex items-center gap-2 px-3 py-1 bg-zinc-50 border border-zinc-200 rounded text-[10px] font-mono text-zinc-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                SYSTEM HEALTH: 100%
+             </div>
+             <p className="text-[10px] font-mono font-medium text-zinc-400">
+               {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
+             </p>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 md:py-10">
+      <div className="max-w-[1800px] mx-auto p-6">
         
-        {/* --- SECTION 1: KEY METRICS --- */}
-        {/* Responsive Grid: 1 col mobile, 2 cols tablet, 4 cols desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-0 border-t border-l border-zinc-200 mb-12">
-          {stats.map((stat, i) => (
-            <div key={i} className="border-r border-b border-zinc-200 p-6 md:p-8 hover:bg-zinc-50 transition-colors group relative overflow-hidden">
-              <div className="flex justify-between items-start mb-6">
-                <p className="text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">{stat.label}</p>
-                <span className="text-[10px] font-mono text-zinc-900 bg-zinc-100 px-1.5 py-0.5">{stat.trend}</span>
-              </div>
-              
-              <div className="flex items-baseline gap-1">
-                {stat.label.includes("REVENUE") && <span className="text-xl font-light text-zinc-400">₹</span>}
-                <h3 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-zinc-900 font-sans break-all">
-                  {stat.value}
-                </h3>
-              </div>
-              
-              <p className="text-[10px] font-mono text-zinc-400 mt-2 uppercase">{stat.desc}</p>
-              
-              <HiOutlineArrowUpRight className="absolute top-4 right-4 text-2xl text-zinc-200 group-hover:text-black transition-colors" />
-            </div>
-          ))}
-        </div>
-
-        {/* --- SECTION 2: REVENUE CHART --- */}
-        <div className="mb-16 border border-zinc-200 p-4 md:p-8 bg-white">
-          {/* Header wraps on mobile */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 md:gap-0">
-            <div>
-              <h2 className="text-xl md:text-2xl font-black tracking-tight uppercase">Revenue Analytics</h2>
-              <p className="text-[10px] font-mono text-zinc-400 mt-1 uppercase">Oct 18 - Oct 24 Performance</p>
-            </div>
-            <div className="flex gap-2">
-               {['7D', '1M', '1Y'].map(range => (
-                 <button key={range} className="px-3 py-1 border border-zinc-200 text-[10px] font-bold hover:bg-black hover:text-white transition-colors">
-                   {range}
-                 </button>
-               ))}
-            </div>
-          </div>
-          
-          <div className="h-[250px] md:h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#000000" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#a1a1aa', fontSize: 10, fontFamily: 'monospace'}} 
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#a1a1aa', fontSize: 10, fontFamily: 'monospace'}}
-                  tickFormatter={(value) => `₹${value}`}
-                  width={40}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#000000" 
-                  strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#colorRevenue)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* --- SECTION 3: ORDERS TABLE & ACTIONS --- */}
-        {/* Stacks on mobile/tablet, side-by-side on large screens */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
-          
-          <div className="xl:col-span-2">
-            <div className="flex justify-between items-end mb-6">
-              <h2 className="text-xl md:text-2xl font-black tracking-tight uppercase">Incoming Orders</h2>
-              <Link href="/admin/orders" className="text-xs font-bold border-b border-black pb-0.5 hover:opacity-60 transition-opacity flex items-center gap-2 whitespace-nowrap">
-                VIEW ALL <span className="hidden md:inline">LOGS</span> <HiArrowLongRight />
-              </Link>
-            </div>
-
-            <div className="border border-zinc-200 bg-white w-full overflow-hidden">
-              {/* Scroll wrapper for mobile table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[600px]">
-                  <thead className="bg-zinc-50 border-b border-zinc-200">
-                    <tr>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase">ID / Date</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase">Customer</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase">Amount</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
-                    {recentOrders.map((order) => (
-                      <tr key={order.id} className="group hover:bg-zinc-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <span className="font-mono text-xs text-zinc-500 group-hover:text-black transition-colors">#{order.id}</span>
-                          <div className="text-[10px] text-zinc-400 font-mono mt-1 uppercase">{order.date}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-zinc-900">{order.customer}</p>
-                          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">{order.items} ITEMS</p>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-sm text-zinc-900">
-                          ₹{order.amount}
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusIndicator status={order.status} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-sm font-bold tracking-widest uppercase text-zinc-400 mb-6">Quick Actions</h2>
-              <div className="space-y-3">
-                <Link href="/admin/products/add" className="block group">
-                  <div className="border border-zinc-200 p-5 flex items-center justify-between hover:bg-black hover:border-black transition-all duration-300 cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
-                        <HiOutlineCube className="text-xl text-zinc-900 group-hover:text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-zinc-900 group-hover:text-white">ADD PRODUCT</p>
-                        <p className="text-[10px] text-zinc-500 group-hover:text-zinc-400">Inventory update</p>
-                      </div>
-                    </div>
-                    <HiArrowLongRight className="text-zinc-300 group-hover:text-white" />
+        {/* --- SECTION 1: METRICS GRID (Operational Focus) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <div key={i} className="group relative border border-zinc-200 p-6 hover:border-black transition-colors duration-300 bg-white">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-2 text-zinc-400 group-hover:text-black transition-colors">
+                     <Icon className="text-lg" />
+                     <p className="text-[10px] font-bold tracking-widest uppercase">{stat.label}</p>
                   </div>
+                  {stat.status === 'good' && <HiCheckCircle className="text-green-500" />}
+                  {stat.status === 'warning' && <HiExclamationCircle className="text-yellow-500" />}
+                  {stat.status === 'critical' && <HiExclamationCircle className="text-red-500" />}
+                </div>
+                
+                <div className="flex items-baseline gap-2 mt-4">
+                  <h3 className="text-3xl font-medium tracking-tight text-zinc-900 font-mono">
+                    {stat.value}
+                  </h3>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 ${stat.trend.includes('+') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                    {stat.trend}
+                  </span>
+                </div>
+                
+                <p className="text-[10px] font-bold text-zinc-300 mt-2 uppercase tracking-wide group-hover:text-zinc-500 transition-colors">{stat.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          
+          {/* --- SECTION 2: LIVE ACTIVITY FEED (Replacement for Chart) --- */}
+          <div className="xl:col-span-2 border border-zinc-200 bg-white p-0">
+             <div className="flex justify-between items-center p-6 border-b border-zinc-200 bg-zinc-50/30">
+                <div className="flex items-center gap-2">
+                   <HiOutlineBell className="text-zinc-400" />
+                   <h2 className="text-sm font-bold uppercase tracking-widest">Live Activity</h2>
+                </div>
+                <button className="text-[10px] font-bold uppercase border-b border-black hover:opacity-50">View All</button>
+             </div>
+             
+             <div className="divide-y divide-zinc-100">
+                {recentActivity.map((item) => (
+                   <div key={item.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                         <div className={`w-2 h-2 rounded-full ${
+                            item.type === 'order' ? 'bg-blue-500' :
+                            item.type === 'alert' ? 'bg-red-500' :
+                            item.type === 'payment' ? 'bg-yellow-500' : 'bg-zinc-300'
+                         }`}></div>
+                         <div>
+                            <p className="text-sm font-medium text-zinc-900">{item.text}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                               <HiOutlineClock className="text-[10px] text-zinc-400" />
+                               <span className="text-[10px] text-zinc-400 font-mono uppercase">{item.time}</span>
+                            </div>
+                         </div>
+                      </div>
+                      {item.amount && (
+                         <span className="text-xs font-mono font-bold text-zinc-900 bg-zinc-100 px-2 py-1 rounded">{item.amount}</span>
+                      )}
+                   </div>
+                ))}
+             </div>
+             <div className="p-4 bg-zinc-50 border-t border-zinc-200 text-center">
+                <p className="text-[10px] text-zinc-400 uppercase tracking-widest">Real-time updates enabled</p>
+             </div>
+          </div>
+
+          {/* --- SECTION 3: QUICK ACTIONS (Command Center) --- */}
+          <div className="xl:col-span-1 border border-zinc-200 bg-white p-8">
+             <h2 className="text-sm font-bold uppercase tracking-widest mb-6">Operations</h2>
+             
+             <div className="space-y-4">
+                <Link href="/admin/products/add" className="block group">
+                   <div className="p-4 border border-zinc-100 bg-zinc-50 hover:bg-black hover:border-black transition-all duration-300 flex items-center justify-between">
+                      <div>
+                         <p className="text-xs font-bold text-zinc-900 group-hover:text-white uppercase mb-1">Add Product</p>
+                         <p className="text-[10px] text-zinc-400 group-hover:text-zinc-500 font-mono">INVENTORY + SKU</p>
+                      </div>
+                      <HiOutlineCube className="text-zinc-300 group-hover:text-white text-xl" />
+                   </div>
                 </Link>
 
                 <Link href="/admin/orders" className="block group">
-                  <div className="border border-zinc-200 p-5 flex items-center justify-between hover:bg-black hover:border-black transition-all duration-300 cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center group-hover:bg-zinc-800 transition-colors">
-                        <HiOutlineShoppingBag className="text-xl text-zinc-900 group-hover:text-white" />
-                      </div>
+                   <div className="p-4 border border-zinc-100 bg-zinc-50 hover:bg-black hover:border-black transition-all duration-300 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 group-hover:text-white">MANAGE ORDERS</p>
-                        <p className="text-[10px] text-zinc-500 group-hover:text-zinc-400">12 Pending</p>
+                         <p className="text-xs font-bold text-zinc-900 group-hover:text-white uppercase mb-1">Manage Orders</p>
+                         <p className="text-[10px] text-zinc-400 group-hover:text-zinc-500 font-mono">12 PENDING</p>
                       </div>
-                    </div>
-                    <HiArrowLongRight className="text-zinc-300 group-hover:text-white" />
-                  </div>
+                      <HiOutlineShoppingBag className="text-zinc-300 group-hover:text-white text-xl" />
+                   </div>
                 </Link>
-              </div>
-            </div>
+
+                <div className="mt-8 pt-8 border-t border-zinc-100">
+                   <div className="flex items-center justify-between text-xs mb-4">
+                      <span className="font-bold text-zinc-400 uppercase tracking-widest">Server Load</span>
+                      <span className="font-mono text-zinc-900">24%</span>
+                   </div>
+                   <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-green-500 h-full w-1/4"></div>
+                   </div>
+                </div>
+             </div>
           </div>
 
         </div>
+
+        {/* --- SECTION 4: RECENT ORDERS TABLE (Data Dense) --- */}
+        <div className="mt-8 border border-zinc-200 bg-white">
+           <div className="flex justify-between items-center p-6 border-b border-zinc-200 bg-zinc-50/30">
+              <h2 className="text-sm font-bold uppercase tracking-widest">Recent Transactions</h2>
+              <Link href="/admin/orders" className="text-[10px] font-bold uppercase border-b border-black hover:opacity-50 flex items-center gap-1">
+                 View All <HiArrowLongRight />
+              </Link>
+           </div>
+           
+           <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                 <thead className="bg-white border-b border-zinc-100">
+                    <tr>
+                       <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase w-32">Order ID</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase">Customer</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase">Method</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase text-right">Amount</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 tracking-widest uppercase text-right">Status</th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y divide-zinc-100">
+                    {recentOrders.map((order) => (
+                       <tr key={order.id} className="group hover:bg-zinc-50 transition-colors">
+                          <td className="px-6 py-4 font-mono text-xs font-medium text-zinc-500 group-hover:text-black">
+                             #{order.id.split('-')[1]}
+                          </td>
+                          <td className="px-6 py-4">
+                             <p className="text-xs font-bold text-zinc-900">{order.customer}</p>
+                             <p className="text-[10px] text-zinc-400 mt-0.5">{order.date}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                             <span className="text-[10px] font-mono border border-zinc-200 px-2 py-1 rounded bg-white text-zinc-600">{order.payment}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono text-xs font-medium text-zinc-900">
+                             ₹{order.amount}
+                          </td>
+                          <td className="px-6 py-4 flex justify-end">
+                             <StatusIndicator status={order.status} />
+                          </td>
+                       </tr>
+                    ))}
+                 </tbody>
+              </table>
+           </div>
+        </div>
+
       </div>
     </div>
   );

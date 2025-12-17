@@ -1,367 +1,222 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { 
-  HiOutlinePencilSquare, 
-  HiCheck, 
-  HiXMark, 
-  HiOutlineUserCircle,
-  HiOutlineShoppingBag,
-  HiOutlineCreditCard,
+  HiOutlineUser, 
+  HiOutlineShieldCheck, 
+  HiOutlineBell, 
+  HiOutlineCreditCard, 
   HiOutlineMap,
-  HiOutlineShieldCheck,
-  HiOutlineBell,
-  HiOutlineTrash,
-  HiOutlineDevicePhoneMobile,
- HiArrowRightOnRectangle
+  HiCamera,
+  HiCheckBadge,
+  HiArrowRightOnRectangle
 } from "react-icons/hi2";
 
-// --- 1. TYPES (Industry Standard) ---
-interface UserStats {
-  totalOrders: number;
-  totalSpend: number;
-  lastOrderDate: string;
-}
-
-interface UserNotification {
-  email: boolean;
-  sms: boolean;
-  promo: boolean;
-}
-
+// --- TYPES ---
 interface UserProfile {
-  id: string;
-  customerId: string;
   name: string;
   email: string;
   phone: string;
-  gender: string;
-  dob: string;
+  username: string;
+  bio: string;
   avatar: string | null;
-  status: "Active" | "Suspended";
-  memberSince: string;
-  stats: UserStats;
-  notifications: UserNotification;
-  defaultAddress: string;
-  paymentMethod: string;
 }
 
-// --- 2. MOCK DATA ---
+// --- MOCK DATA ---
 const MOCK_USER: UserProfile = {
-  id: "u_123",
-  customerId: "CUST-88291",
   name: "Sumit Kumar",
-  email: "Sumit@example.com",
+  email: "sumit@example.com",
   phone: "+91 98765 43210",
-  gender: "Male",
-  dob: "1998-08-15",
-  avatar: null, // null = render initials
-  status: "Active",
-  memberSince: "Jan 2024",
-  stats: {
-    totalOrders: 24,
-    totalSpend: 18450,
-    lastOrderDate: "12 Dec 2024",
-  },
-  notifications: {
-    email: true,
-    sms: true,
-    promo: false,
-  },
-  defaultAddress: "Flat 402, Sunshine Apts, MG Road, Bangalore - 560001",
-  paymentMethod: "UPI (Google Pay)",
+  username: "sumit_k",
+  bio: "Fashion enthusiast and software engineer based in Bangalore.",
+  avatar: null, 
 };
 
-export default function ProfilePage() {
-  // --- STATE ---
-  const [user, setUser] = useState<UserProfile>(MOCK_USER);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState("profile");
+  const [user, setUser] = useState(MOCK_USER);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Form State for Editable Fields
-  const [formData, setFormData] = useState({
-    name: user.name,
-    phone: user.phone,
-    gender: user.gender,
-    dob: user.dob,
-  });
+  // --- TABS ---
+  const tabs = [
+    { id: "profile", label: "Profile" },
+    { id: "account", label: "Security" },
+    { id: "billing", label: "Billing" },
+    { id: "notifications", label: "Notifications" },
+  ];
 
-  // --- HANDLERS ---
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    // Simulate Backend API Call
-    setTimeout(() => {
-      setUser({ ...user, ...formData });
-      setIsEditing(false);
-      setIsSaving(false);
-    }, 1500);
-  };
-
-  const handleCancel = () => {
-    setFormData({ name: user.name, phone: user.phone, gender: user.gender, dob: user.dob });
-    setIsEditing(false);
-  };
-
-  const toggleNotification = (key: keyof UserNotification) => {
-    setUser((prev) => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [key]: !prev.notifications[key],
-      },
-    }));
+  const handleSave = () => {
+    setIsLoading(true);
+    setTimeout(() => setIsLoading(false), 1500);
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="min-h-screen bg-white">
       
       {/* =========================================
-          SECTION 1: PROFILE OVERVIEW (TOP CARD)
+          HEADER SECTION (Clean & Centered)
       ========================================= */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
-        
-        <div className="flex items-center gap-6">
-          {/* Avatar */}
-          <div className="w-20 h-20 rounded-full bg-zinc-900 text-white flex items-center justify-center text-2xl font-bold border-4 border-white shadow-md">
-            {user.avatar ? (
-              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" />
-            ) : (
-              user.name.charAt(0)
-            )}
-          </div>
-          
-          {/* Details */}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-            <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-500 font-medium">
-              <span>ID: <span className="font-mono text-gray-900">{user.customerId}</span></span>
-              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-              <span>Member since {user.memberSince}</span>
-            </div>
-            {/* Status Badge */}
-            <div className="mt-3">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                user.status === "Active" 
-                  ? "bg-green-100 text-green-700 border border-green-200" 
-                  : "bg-red-100 text-red-700"
-              }`}>
-                <span className={`w-2 h-2 rounded-full ${user.status === "Active" ? "bg-green-500" : "bg-red-500"}`}></span>
-                {user.status}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="border-b border-gray-100 bg-white sticky top-0 z-20">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 pt-12 pb-0">
+           
+           <div className="flex justify-between items-end mb-8">
+             <div>
+               <h1 className="text-3xl font-black text-gray-900 tracking-tight mb-1">Account Settings</h1>
+               <p className="text-gray-500 text-sm">Manage your personal details and preferences.</p>
+             </div>
+             <button className="hidden md:flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-700 transition">
+                <HiArrowRightOnRectangle className="text-lg" /> Sign Out
+             </button>
+           </div>
 
-        {/* Quick Stats Grid */}
-        <div className="flex items-center gap-6 md:gap-10 bg-gray-50 px-6 py-4 rounded-xl border border-gray-100 w-full md:w-auto justify-between md:justify-start">
-           <div className="text-center">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Orders</p>
-              <p className="text-lg font-bold text-gray-900">{user.stats.totalOrders}</p>
-           </div>
-           <div className="w-px h-8 bg-gray-200"></div>
-           <div className="text-center">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Spent</p>
-              <p className="text-lg font-bold text-gray-900">₹{user.stats.totalSpend.toLocaleString()}</p>
-           </div>
-           <div className="w-px h-8 bg-gray-200"></div>
-           <div className="text-center">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Last Order</p>
-              <p className="text-lg font-bold text-gray-900">{user.stats.lastOrderDate}</p>
+           {/* HORIZONTAL TABS */}
+           <div className="flex gap-8 overflow-x-auto scrollbar-hide">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`pb-4 text-sm font-bold transition-all relative whitespace-nowrap ${
+                    activeTab === tab.id 
+                      ? "text-black" 
+                      : "text-gray-400 hover:text-gray-600"
+                  }`}
+                >
+                  {tab.label}
+                  {/* Active Indicator Line */}
+                  {activeTab === tab.id && (
+                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-black rounded-t-full"></span>
+                  )}
+                </button>
+              ))}
            </div>
         </div>
-
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* =========================================
+          CONTENT AREA (Centered)
+      ========================================= */}
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-12">
         
-        {/* =========================================
-            LEFT COLUMN (2/3 Width)
-        ========================================= */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* --- SECTION 2: BASIC INFORMATION --- */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <HiOutlineUserCircle className="text-xl" /> Basic Information
-              </h3>
-              {!isEditing ? (
-                <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 text-sm font-bold text-black hover:text-zinc-600 transition">
-                  <HiOutlinePencilSquare /> Edit
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button onClick={handleCancel} disabled={isSaving} className="text-xs font-bold text-red-500 px-3 py-1 bg-red-50 rounded-lg">Cancel</button>
-                  <button onClick={handleSave} disabled={isSaving} className="text-xs font-bold text-green-600 px-3 py-1 bg-green-50 rounded-lg flex items-center gap-1">
-                    {isSaving ? "Saving..." : <><HiCheck /> Save</>}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Name */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase text-gray-400">Full Name</label>
-                {isEditing ? (
-                  <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b-2 border-gray-200 py-1 font-medium focus:border-black focus:outline-none" />
-                ) : (
-                  <p className="font-bold text-gray-900">{user.name}</p>
-                )}
-              </div>
-
-              {/* Email (Read Only) */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase text-gray-400">Email Address</label>
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-500">{user.email}</p>
-                  <HiCheck className="text-green-500" title="Verified" />
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase text-gray-400">Phone</label>
-                {isEditing ? (
-                  <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border-b-2 border-gray-200 py-1 font-medium focus:border-black focus:outline-none" />
-                ) : (
-                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-gray-900">{user.phone}</p>
-                    <HiCheck className="text-green-500" title="Verified" />
-                  </div>
-                )}
-              </div>
-
-              {/* Gender */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase text-gray-400">Gender</label>
-                {isEditing ? (
-                  <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})} className="w-full border-b-2 border-gray-200 py-1 font-medium focus:border-black focus:outline-none bg-white">
-                    <option>Male</option><option>Female</option><option>Other</option>
-                  </select>
-                ) : (
-                  <p className="font-bold text-gray-900">{user.gender}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* --- SECTION 3: ADDRESS & PAYMENT SUMMARY --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* TAB: PROFILE */}
+        {activeTab === "profile" && (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
             
-            {/* Address */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-               <div>
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
-                    <HiOutlineMap className="text-lg" /> Default Address
-                  </h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{user.defaultAddress}</p>
-               </div>
-               <Link href="/account/addresses" className="mt-4 text-xs font-bold text-black border border-gray-200 rounded-xl py-2 text-center hover:bg-black hover:text-white transition">
-                  Manage Addresses
-               </Link>
-            </div>
-
-            {/* Payment */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-               <div>
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
-                    <HiOutlineCreditCard className="text-lg" /> Payment Snapshot
-                  </h3>
-                  <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center border text-xs">UPI</div>
-                    <span className="text-sm font-bold text-gray-900">{user.paymentMethod}</span>
+            {/* 1. Avatar Section */}
+            <div className="flex flex-col md:flex-row items-center gap-8">
+               <div className="relative group cursor-pointer">
+                  <div className="w-28 h-28 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-4xl font-black border-4 border-white shadow-lg overflow-hidden">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      user.name.charAt(0)
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                     <HiCamera className="text-white text-2xl" />
                   </div>
                </div>
-               <button className="mt-4 text-xs font-bold text-gray-400 border border-dashed border-gray-200 rounded-xl py-2 text-center cursor-not-allowed">
-                  Saved Cards (Secure)
+               
+               <div className="text-center md:text-left">
+                  <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
+                  <p className="text-sm text-gray-500 mb-4">Update your photo and personal details.</p>
+                  <div className="flex gap-3 justify-center md:justify-start">
+                    <button className="px-4 py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-zinc-800 transition">Upload New</button>
+                    <button className="px-4 py-2 border border-gray-200 text-black text-xs font-bold rounded-lg hover:bg-gray-50 transition">Remove</button>
+                  </div>
+               </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* 2. Form Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
+               
+               <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Display Name</label>
+                  <input 
+                    type="text" 
+                    value={user.name}
+                    onChange={(e) => setUser({...user, name: e.target.value})}
+                    className="w-full bg-transparent border-b border-gray-200 py-3 text-base font-bold text-gray-900 focus:outline-none focus:border-black transition"
+                    placeholder="Your Name"
+                  />
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Username</label>
+                  <div className="relative">
+                    <span className="absolute left-0 top-3 text-gray-400 font-bold">@</span>
+                    <input 
+                      type="text" 
+                      value={user.username}
+                      onChange={(e) => setUser({...user, username: e.target.value})}
+                      className="w-full bg-transparent border-b border-gray-200 py-3 pl-5 text-base font-bold text-gray-900 focus:outline-none focus:border-black transition"
+                    />
+                  </div>
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Email Address</label>
+                  <div className="relative">
+                     <input 
+                       type="email" 
+                       value={user.email}
+                       disabled
+                       className="w-full bg-transparent border-b border-gray-200 py-3 text-base font-bold text-gray-400 cursor-not-allowed"
+                     />
+                     <HiCheckBadge className="absolute right-0 top-3 text-green-500 text-xl" />
+                  </div>
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    value={user.phone}
+                    onChange={(e) => setUser({...user, phone: e.target.value})}
+                    className="w-full bg-transparent border-b border-gray-200 py-3 text-base font-bold text-gray-900 focus:outline-none focus:border-black transition"
+                  />
+               </div>
+
+               <div className="md:col-span-2 space-y-2 mt-4">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Bio</label>
+                  <textarea 
+                    rows={3}
+                    value={user.bio}
+                    onChange={(e) => setUser({...user, bio: e.target.value})}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition resize-none"
+                    placeholder="Write a short bio..."
+                  />
+               </div>
+
+            </div>
+
+            {/* 3. Footer Action */}
+            <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-100">
+               <span className="text-xs text-gray-400 font-medium mr-auto hidden md:block">Last saved: Just now</span>
+               <button className="text-sm font-bold text-gray-500 hover:text-black transition px-4">Cancel</button>
+               <button 
+                 onClick={handleSave}
+                 disabled={isLoading}
+                 className="bg-black text-white px-8 py-3 rounded-full text-sm font-bold hover:bg-zinc-800 transition shadow-lg hover:shadow-xl disabled:opacity-70 flex items-center gap-2"
+               >
+                 {isLoading ? (
+                   <>Saving...</>
+                 ) : (
+                   "Save Changes"
+                 )}
                </button>
             </div>
+
           </div>
+        )}
 
-        </div>
-
-        {/* =========================================
-            RIGHT COLUMN (1/3 Width)
-        ========================================= */}
-        <div className="lg:col-span-1 space-y-8">
-          
-          {/* --- SECTION 4: SECURITY --- */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
-                <HiOutlineShieldCheck className="text-xl" /> Security
-             </h3>
-             
-             <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs font-bold uppercase text-gray-400">Password</label>
-                    <button className="text-xs font-bold text-black hover:underline">Change</button>
-                  </div>
-                  <p className="text-lg tracking-widest text-gray-900">●●●●●●●●</p>
-                </div>
-
-                <div className="border-t border-gray-100 pt-4">
-                  <label className="text-xs font-bold uppercase text-gray-400 block mb-3">Logged-in Devices</label>
-                  <div className="flex items-center gap-3 mb-4">
-                    <HiOutlineDevicePhoneMobile className="text-gray-400 text-lg" />
-                    <div>
-                      <p className="text-xs font-bold text-gray-900">Chrome on Mac OS</p>
-                      <p className="text-[10px] text-green-600 font-bold">Active Now</p>
-                    </div>
-                  </div>
-                  <button className="w-full flex items-center justify-center gap-2 text-xs font-bold text-red-500 bg-red-50 py-2 rounded-xl hover:bg-red-100 transition">
-                     <HiArrowRightOnRectangle /> Logout All Devices
-                  </button>
-                </div>
-             </div>
-          </div>
-
-          {/* --- SECTION 5: NOTIFICATIONS --- */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
-                <HiOutlineBell className="text-xl" /> Notifications
-             </h3>
-             <div className="space-y-4">
-                {Object.entries(user.notifications).map(([key, value]) => (
-                   <div key={key} className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600 capitalize">{key} Updates</span>
-                      {/* Toggle Switch UI */}
-                      <button 
-                        onClick={() => toggleNotification(key as keyof UserNotification)}
-                        className={`w-10 h-6 rounded-full relative transition-colors duration-200 ease-in-out ${
-                           value ? "bg-black" : "bg-gray-200"
-                        }`}
-                      >
-                         <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ${
-                            value ? "translate-x-4" : "translate-x-0"
-                         }`}></span>
-                      </button>
-                   </div>
-                ))}
-             </div>
-          </div>
-
-          {/* --- SECTION 6: DANGER ZONE --- */}
-          <div className="border border-red-100 bg-red-50/50 rounded-xl p-6">
-             <h3 className="text-sm font-bold text-red-900 mb-2">Account Actions</h3>
-             <div className="space-y-2">
-               <button className="w-full text-left text-xs font-bold text-red-600 hover:text-red-800 py-2">
-                 Deactivate Account
-               </button>
-               <button className="w-full text-left text-xs font-bold text-red-600 hover:text-red-800 py-2">
-                 Request Data Export
-               </button>
-               <div className="h-px bg-red-200 my-2"></div>
-               <button className="w-full flex items-center gap-2 text-xs font-bold text-white bg-red-600 py-3 px-4 rounded-xl hover:bg-red-700 transition shadow-sm">
-                 <HiOutlineTrash /> Delete Account
-               </button>
-             </div>
-          </div>
-
-        </div>
+        {/* EMPTY STATES FOR OTHER TABS */}
+        {activeTab !== "profile" && (
+           <div className="text-center py-32 opacity-50">
+              <p className="text-xl font-bold text-gray-300">This section is coming soon.</p>
+           </div>
+        )}
 
       </div>
     </div>

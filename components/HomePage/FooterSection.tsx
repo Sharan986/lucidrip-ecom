@@ -34,38 +34,7 @@ export default function FooterSection() {
 
   return (
     <>
-      {/* --- PART 1: Features Bar (Light Background) --- */}
-   <section className="bg-white border-t border-gray-100 py-20">
-  <div className="max-w-7xl mx-auto px-6 md:px-8">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-      {features.map((feature) => (
-        <div 
-          key={feature.id} 
-          // Flex layout: Stacked on mobile, Side-by-side on Desktop
-          // Added 'gap-6' to increase space between Icon and Text
-          className="flex flex-col items-center text-center lg:flex-row lg:text-left lg:items-center gap-6"
-        >
-          
-          {/* Icon Container (Static, no hover) */}
-          <div className="shrink-0 p-5 rounded-full bg-gray-50 text-2xl text-black">
-            {feature.icon}
-          </div>
-          
-          {/* Text Wrapper */}
-          <div>
-            <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide mb-1">
-              {feature.title}
-            </h3>
-            <p className="text-sm text-gray-500 font-medium leading-relaxed">
-              {feature.subtitle}
-            </p>
-          </div>
-
-        </div>
-      ))}
-    </div>
-  </div>
-</section>
+ 
 
       {/* --- PART 2: Main Footer (Black Background) --- */}
       <footer className="bg-black text-white pt-20">

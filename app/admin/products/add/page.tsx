@@ -1,388 +1,312 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import Image from "next/image";
-import { 
-  HiCloudArrowUp, 
-  HiXMark, 
-  HiPlus, 
-  HiTrash, 
-  HiOutlineCurrencyRupee,
-  HiOutlineCube,
-  HiArrowLongLeft
-} from "react-icons/hi2";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
-
-// --- TYPES ---
-interface ProductFormData {
-  name: string;
-  price: string;
-  description: string;
-  slug: string;
-}
+import { 
+  HiArrowLeft, 
+  HiOutlineCloudArrowUp, 
+  HiXMark,
+  HiOutlineCurrencyRupee,
+  HiOutlineBold,
+  HiOutlineItalic,
+  HiOutlineListBullet,
+  HiOutlineLink
+} from "react-icons/hi2";
 
 export default function AddProductPage() {
-  // --- STATE ---
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: "",
-    price: "",
-    description: "",
-    slug: "",
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Pricing State for Margin Calc
+  const [price, setPrice] = useState<number>(0);
+  const [cost, setCost] = useState<number>(0);
 
-  const [sizes, setSizes] = useState<string[]>([]);
-  const [currentSize, setCurrentSize] = useState<string>("");
-
-  const [colors, setColors] = useState<string[]>([]);
-  const [currentColor, setCurrentColor] = useState<string>("");
-
-  const [images, setImages] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
-
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  // --- MEMORY CLEANUP ---
-  useEffect(() => {
-    return () => {
-      previews.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [previews]);
+  const profit = price - cost;
+  const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
 
   // --- HANDLERS ---
-  const handleTextChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev) => {
-        const newData = { ...prev, [name]: value };
-        if (name === "name") {
-          newData.slug = value.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
-        }
-        return newData;
-      });
-    },
-    []
-  );
-
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      const validFiles = newFiles.filter(file => file.type.startsWith("image/"));
-      const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
-
-      setImages((prev) => [...prev, ...validFiles]);
-      setPreviews((prev) => [...prev, ...newPreviews]);
-    }
-  }, []);
-
-  const removeImage = useCallback((indexToRemove: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== indexToRemove));
-    setPreviews((prev) => {
-      URL.revokeObjectURL(prev[indexToRemove]);
-      return prev.filter((_, i) => i !== indexToRemove);
-    });
-  }, []);
-
-  const addTag = useCallback((
-    value: string, 
-    currentList: string[], 
-    setList: React.Dispatch<React.SetStateAction<string[]>>, 
-    clearInput: React.Dispatch<React.SetStateAction<string>>
-  ) => {
-    const trimmed = value.trim();
-    if (trimmed && !currentList.includes(trimmed)) {
-      setList((prev) => [...prev, trimmed]);
-      clearInput("");
-    }
-  }, []);
-
-  const removeTag = useCallback((
-    valueToRemove: string, 
-    setList: React.Dispatch<React.SetStateAction<string[]>>
-  ) => {
-    setList((prev) => prev.filter((item) => item !== valueToRemove));
-  }, []);
-
-  // --- SUBMIT ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    if (!formData.name.trim()) { alert("Product Name is required"); setIsSubmitting(false); return; }
-    if (!formData.price || isNaN(Number(formData.price))) { alert("Valid Price is required"); setIsSubmitting(false); return; }
-    if (images.length === 0) { alert("At least one image is required"); setIsSubmitting(false); return; }
-
-    try {
-      const data = new FormData();
-      data.append("name", formData.name);
-      data.append("price", formData.price);
-      data.append("description", formData.description);
-      data.append("slug", formData.slug);
-      data.append("sizes", JSON.stringify(sizes));
-      data.append("colors", JSON.stringify(colors));
-      images.forEach((file) => data.append("images", file));
-
-      console.log("PAYLOAD:", Object.fromEntries(data));
-      await new Promise((resolve) => setTimeout(resolve, 1500)); 
-      alert("Product Created Successfully!");
-      
-      setFormData({ name: "", price: "", description: "", slug: "" });
-      setSizes([]);
-      setColors([]);
-      setImages([]);
-      setPreviews([]);
-      
-    } catch (error) {
-      console.error(error);
-      alert("Failed to create product");
-    } finally {
-      setIsSubmitting(false);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const url = URL.createObjectURL(e.target.files[0]);
+      setImages([...images, url]);
     }
   };
 
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
+
+  const handleSave = () => {
+    setIsLoading(true);
+    setTimeout(() => setIsLoading(false), 2000);
+  };
+
   return (
-    <div className="min-h-screen bg-white text-zinc-900 pb-20 font-sans">
+    <div className="min-h-screen bg-zinc-50 pb-24 font-sans text-zinc-900">
       
-      {/* --- TOP BAR --- */}
-      <div className="border-b border-zinc-200">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/admin" className="text-zinc-400 hover:text-black transition-colors">
-              <HiArrowLongLeft className="text-xl" />
-            </Link>
-            <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest hidden sm:block">INVENTORY // NEW ITEM</p>
-            <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest sm:hidden">NEW ITEM</p>
+      {/* --- HEADER (Sticky Actions) --- */}
+      <div className="sticky top-0 z-30 bg-zinc-50/80 backdrop-blur-md border-b border-zinc-200 mb-8">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <Link href="/admin/products" className="p-2 hover:bg-zinc-200 rounded-full transition text-zinc-500 hover:text-black">
+                <HiArrowLeft className="text-lg" />
+              </Link>
+              <h1 className="text-xl font-bold tracking-tight">Add Product</h1>
+            </div>
+            <div className="flex gap-3">
+               <button className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-black hover:bg-zinc-200 rounded-lg transition">
+                 Discard
+               </button>
+               <button 
+                 onClick={handleSave}
+                 disabled={isLoading}
+                 className="px-6 py-2 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-zinc-800 transition shadow-lg disabled:opacity-70 flex items-center gap-2"
+               >
+                 {isLoading ? <span className="animate-pulse">Saving...</span> : "Save Product"}
+               </button>
+            </div>
           </div>
-          <p className="text-xs font-mono text-zinc-900">DRAFT MODE</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-[1600px] mx-auto px-4 md:px-6 py-8 md:py-10">
+      {/* --- MAIN FORM GRID --- */}
+      <div className="max-w-[1100px] mx-auto px-4 md:px-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* --- HEADER --- */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-12">
-          <div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2">Create Product</h1>
-            <p className="text-zinc-500 font-mono text-xs uppercase tracking-wider">Define specifications for new stock unit.</p>
-          </div>
+        {/* ====================
+            LEFT COLUMN (Main)
+        ==================== */}
+        <div className="lg:col-span-2 space-y-6">
           
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-            <button 
-              type="button" 
-              className="w-full sm:w-auto px-8 py-4 border border-zinc-200 text-xs font-bold tracking-widest uppercase hover:bg-zinc-50 transition-colors text-center"
-            >
-              Discard
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full sm:w-auto px-8 py-4 bg-black text-white border border-black text-xs font-bold tracking-widest uppercase hover:bg-zinc-800 transition-all disabled:opacity-50 text-center"
-            >
-              {isSubmitting ? "Processing..." : "Publish Unit"}
-            </button>
-          </div>
-        </div>
-
-        {/* --- MAIN GRID --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-          
-          {/* --- LEFT COLUMN (Main Specs) --- */}
-          <div className="lg:col-span-8 space-y-10 md:space-y-12">
-            
-            {/* Section 1: Identity */}
-            <div className="border-t border-zinc-200 pt-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 bg-black"></span>
-                01. Identification
-              </h3>
-              
-              <div className="space-y-6">
+          {/* 1. Title & Description */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+             <div className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Product Name</label>
-                  <input 
-                    name="name" 
-                    value={formData.name} 
-                    onChange={handleTextChange}
-                    placeholder="E.G. OVERSIZED HEAVY KNIT" 
-                    className="w-full bg-zinc-50 border-b border-zinc-200 p-4 outline-none focus:border-black focus:bg-white transition-colors font-mono text-sm placeholder:text-zinc-300"
-                  />
+                   <label className="block text-xs font-bold uppercase text-zinc-500 mb-2 tracking-wider">Title</label>
+                   <input 
+                     type="text" 
+                     placeholder="e.g. Oversized Heavyweight T-Shirt" 
+                     className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition placeholder:text-zinc-300"
+                   />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Price (INR)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <HiOutlineCurrencyRupee className="text-zinc-400" />
-                      </div>
-                      <input 
-                        name="price" 
-                        type="number" 
-                        value={formData.price} 
-                        onChange={handleTextChange}
-                        placeholder="0.00" 
-                        className="w-full bg-zinc-50 border-b border-zinc-200 pl-10 p-4 outline-none focus:border-black focus:bg-white transition-colors font-mono text-sm placeholder:text-zinc-300"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Generated Slug</label>
-                    <div className="flex items-center px-4 py-3 bg-zinc-50 border-b border-zinc-200 text-zinc-400 font-mono text-sm overflow-hidden">
-                      <span className="mr-1 whitespace-nowrap">/product/</span>
-                      <input 
-                        name="slug" 
-                        value={formData.slug} 
-                        readOnly
-                        className="bg-transparent w-full outline-none text-zinc-900 truncate"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Technical Description</label>
-                  <textarea 
-                    name="description" 
-                    rows={6} 
-                    value={formData.description}
-                    onChange={handleTextChange}
-                    placeholder="MATERIAL COMPOSITION, FIT DETAILS, CARE INSTRUCTIONS..." 
-                    className="w-full bg-zinc-50 border-b border-zinc-200 p-4 outline-none focus:border-black focus:bg-white transition-colors font-mono text-sm placeholder:text-zinc-300 resize-none uppercase"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 2: Visuals */}
-            <div className="border-t border-zinc-200 pt-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 bg-zinc-300"></span>
-                02. Visual Assets
-              </h3>
-
-              <div className="bg-zinc-50 border border-zinc-200 border-dashed p-6 md:p-8">
-                <div className="flex flex-col items-center justify-center mb-8 text-center">
-                  <div className="w-16 h-16 bg-white border border-zinc-200 flex items-center justify-center mb-4">
-                    <HiCloudArrowUp className="text-2xl text-zinc-900" />
-                  </div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-900">Upload Assets</p>
-                  <p className="text-[10px] font-mono text-zinc-400 mt-1">SUPPORTED: JPG, PNG, WEBP (MAX 5MB)</p>
-                  
-                  <label className="mt-6 px-6 py-3 bg-black text-white text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-zinc-800 transition-colors w-full sm:w-auto text-center">
-                    Select Files
-                    <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                </div>
-
-                {/* Grid */}
-                {previews.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-8 border-t border-zinc-200 border-dashed">
-                    {previews.map((src, index) => (
-                      <div key={src} className="group relative aspect-[3/4] bg-white border border-zinc-200">
-                        <Image src={src} alt="preview" fill className="object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
-                        <button 
-                          type="button" 
-                          onClick={() => removeImage(index)}
-                          className="absolute top-0 right-0 p-2 bg-black text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        >
-                          <HiTrash className="w-4 h-4" />
-                        </button>
-                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-white text-black text-[9px] font-mono font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                          IMG_0{index + 1}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </div>
-
-          {/* --- RIGHT COLUMN (Configuration) --- */}
-          <div className="lg:col-span-4 space-y-10 md:space-y-12">
-            
-            <div className="border-t border-zinc-200 pt-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 bg-zinc-300"></span>
-                03. Configuration
-              </h3>
-
-              <div className="space-y-8">
                 
-                {/* Sizes Input */}
-                <div className="bg-zinc-50 border border-zinc-200 p-6">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4">Size Range</label>
-                  
-                  <div className="flex gap-0 mb-4">
-                    <input 
-                      value={currentSize}
-                      onChange={(e) => setCurrentSize(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag(currentSize, sizes, setSizes, setCurrentSize))}
-                      placeholder="ADD SIZE" 
-                      className="flex-1 min-w-0 bg-white border border-zinc-200 p-3 outline-none focus:border-black font-mono text-xs placeholder:text-zinc-300"
-                    />
-                    <button type="button" onClick={() => addTag(currentSize, sizes, setSizes, setCurrentSize)} className="px-4 bg-black text-white hover:bg-zinc-800">
-                      <HiPlus className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {sizes.map((s) => (
-                      <span key={s} className="inline-flex items-center border border-black bg-white px-3 py-1.5 text-xs font-mono font-bold">
-                        {s}
-                        <button onClick={() => removeTag(s, setSizes)} className="ml-3 hover:text-red-500"><HiXMark className="w-3 h-3" /></button>
-                      </span>
-                    ))}
-                    {sizes.length === 0 && <span className="text-[10px] font-mono text-zinc-400">NO SIZES DEFINED</span>}
-                  </div>
+                {/* Rich Text Editor Mock */}
+                <div>
+                   <label className="block text-xs font-bold uppercase text-zinc-500 mb-2 tracking-wider">Description</label>
+                   <div className="border border-zinc-200 rounded-lg overflow-hidden focus-within:border-black focus-within:ring-1 focus-within:ring-black transition">
+                      <div className="bg-zinc-50 border-b border-zinc-200 px-3 py-2 flex gap-2">
+                         <button className="p-1 hover:bg-zinc-200 rounded text-zinc-600"><HiOutlineBold /></button>
+                         <button className="p-1 hover:bg-zinc-200 rounded text-zinc-600"><HiOutlineItalic /></button>
+                         <button className="p-1 hover:bg-zinc-200 rounded text-zinc-600"><HiOutlineListBullet /></button>
+                         <button className="p-1 hover:bg-zinc-200 rounded text-zinc-600"><HiOutlineLink /></button>
+                      </div>
+                      <textarea 
+                        rows={8}
+                        className="w-full px-4 py-3 text-sm font-medium focus:outline-none resize-none"
+                      />
+                   </div>
                 </div>
+             </div>
+          </div>
 
-                {/* Colors Input */}
-                <div className="bg-zinc-50 border border-zinc-200 p-6">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4">Colorways</label>
-                  
-                  <div className="flex gap-0 mb-4">
-                    <input 
-                      value={currentColor}
-                      onChange={(e) => setCurrentColor(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag(currentColor, colors, setColors, setCurrentColor))}
-                      placeholder="ADD COLOR" 
-                      className="flex-1 min-w-0 bg-white border border-zinc-200 p-3 outline-none focus:border-black font-mono text-xs placeholder:text-zinc-300"
-                    />
-                    <button type="button" onClick={() => addTag(currentColor, colors, setColors, setCurrentColor)} className="px-4 bg-black text-white hover:bg-zinc-800">
-                      <HiPlus className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {colors.map((c) => (
-                      <span key={c} className="inline-flex items-center bg-black text-white px-3 py-1.5 text-xs font-mono font-bold">
-                        {c}
-                        <button onClick={() => removeTag(c, setColors)} className="ml-3 hover:text-zinc-400"><HiXMark className="w-3 h-3" /></button>
-                      </span>
-                    ))}
-                    {colors.length === 0 && <span className="text-[10px] font-mono text-zinc-400">NO COLORS DEFINED</span>}
-                  </div>
+          {/* 2. Media */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+             <label className="block text-xs font-bold uppercase text-zinc-500 mb-4 tracking-wider">Media</label>
+             
+             {/* Upload Area */}
+             <div 
+               onClick={() => fileInputRef.current?.click()}
+               className="border-2 border-dashed border-zinc-200 rounded-xl h-32 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-zinc-50 hover:border-zinc-400 transition-all group"
+             >
+                <input type="file" hidden ref={fileInputRef} onChange={handleImageUpload} accept="image/*" />
+                <div className="flex items-center gap-2 text-zinc-500 group-hover:text-black transition">
+                   <HiOutlineCloudArrowUp className="text-xl" />
+                   <span className="text-sm font-bold underline decoration-zinc-300 underline-offset-4">Click to upload</span>
                 </div>
+                <p className="text-[10px] text-zinc-400 mt-2 font-mono">ACCEPTING: PNG, JPG, GIF</p>
+             </div>
 
-                {/* Status Box */}
-                <div className="bg-black text-white p-6 relative overflow-hidden">
-                  <p className="text-[10px] font-bold tracking-widest text-zinc-500 mb-2">SYSTEM STATUS</p>
-                  <h4 className="text-xl font-bold uppercase">Ready to Push</h4>
-                  <p className="text-[10px] font-mono text-zinc-400 mt-2 border-t border-zinc-800 pt-2">
-                    DATABASE: CONNECTED<br/>
-                    STORAGE: AVAILABLE
-                  </p>
-                  <HiOutlineCube className="absolute -bottom-4 -right-4 text-6xl text-zinc-800 opacity-50" />
+             {/* Image Grid */}
+             {images.length > 0 && (
+                <div className="grid grid-cols-4 gap-4 mt-6">
+                   {images.map((img, idx) => (
+                      <div key={idx} className="relative aspect-square border border-zinc-200 rounded-lg overflow-hidden group bg-zinc-50">
+                         <img src={img} alt="Preview" className="w-full h-full object-cover" />
+                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button 
+                              onClick={() => removeImage(idx)}
+                              className="bg-white p-2 rounded-full text-red-600 hover:scale-110 transition"
+                            >
+                               <HiXMark />
+                            </button>
+                         </div>
+                      </div>
+                   ))}
                 </div>
+             )}
+          </div>
 
-              </div>
-            </div>
+          {/* 3. Pricing & Profit */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+             <label className="block text-xs font-bold uppercase text-zinc-500 mb-6 tracking-wider">Pricing</label>
+             
+             <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                   <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Price</label>
+                   <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">₹</span>
+                      <input 
+                        type="number" 
+                        placeholder="0.00" 
+                        onChange={(e) => setPrice(Number(e.target.value))}
+                        className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg text-sm font-mono font-medium focus:outline-none focus:border-black" 
+                      />
+                   </div>
+                </div>
+                <div>
+                   <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Compare-at price</label>
+                   <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">₹</span>
+                      <input type="number" placeholder="0.00" className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg text-sm font-mono font-medium focus:outline-none focus:border-black" />
+                   </div>
+                </div>
+             </div>
 
+             <div className="flex gap-6 pt-6 border-t border-zinc-100">
+                <div className="flex-1">
+                   <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Cost per item</label>
+                   <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">₹</span>
+                      <input 
+                        type="number" 
+                        placeholder="0.00"
+                        onChange={(e) => setCost(Number(e.target.value))}
+                        className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg text-sm font-mono font-medium focus:outline-none focus:border-black" 
+                      />
+                   </div>
+                   <p className="text-[10px] text-zinc-400 mt-1">Customers won't see this</p>
+                </div>
+                <div className="flex-1 flex gap-4 items-center">
+                   <div>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest">Margin</p>
+                      <p className="text-sm font-mono font-medium text-zinc-900">{isNaN(Number(margin)) ? 0 : margin}%</p>
+                   </div>
+                   <div>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest">Profit</p>
+                      <p className="text-sm font-mono font-medium text-zinc-900">₹{profit.toLocaleString()}</p>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* 4. Inventory */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+             <label className="block text-xs font-bold uppercase text-zinc-500 mb-6 tracking-wider">Inventory</label>
+             
+             <div className="grid grid-cols-2 gap-6">
+                <div>
+                   <label className="text-[10px] font-bold text-zinc-500 mb-1 block">SKU (Stock Keeping Unit)</label>
+                   <input type="text" className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm font-mono focus:outline-none focus:border-black" />
+                </div>
+                <div>
+                   <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Barcode (ISBN, UPC, GTIN, etc.)</label>
+                   <input type="text" className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm font-mono focus:outline-none focus:border-black" />
+                </div>
+             </div>
+
+             <div className="mt-6 flex items-center gap-3">
+               <input type="checkbox" id="track" className="w-4 h-4 accent-black" defaultChecked />
+               <label htmlFor="track" className="text-sm font-medium text-zinc-700">Track quantity</label>
+             </div>
+             
+             <div className="mt-4 border-t border-zinc-100 pt-4">
+               <div className="flex items-center gap-3 mb-4">
+                 <input type="checkbox" id="continue" className="w-4 h-4 accent-black" />
+                 <label htmlFor="continue" className="text-sm font-medium text-zinc-700">Continue selling when out of stock</label>
+               </div>
+               
+               <div className="w-1/2">
+                  <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Quantity</label>
+                  <input type="number" defaultValue={0} className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm font-mono focus:outline-none focus:border-black" />
+               </div>
+             </div>
+          </div>
+
+          {/* 5. SEO Preview */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+             <div className="flex justify-between items-center mb-4">
+                <label className="block text-xs font-bold uppercase text-zinc-500 tracking-wider">Search Engine Listing</label>
+                <button className="text-xs text-blue-600 font-bold hover:underline">Edit</button>
+             </div>
+             <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100">
+                <p className="text-xs text-zinc-500 mb-1">https://yourstore.com/products/oversized-t-shirt</p>
+                <p className="text-sm font-medium text-blue-700 truncate">Oversized Heavyweight T-Shirt | Premium Streetwear</p>
+                <p className="text-xs text-zinc-600 mt-1 line-clamp-2">
+                   Shop the latest oversized tees. 100% Cotton, 240GSM. Available in Black, White, and Beige. Free shipping on orders over ₹2000.
+                </p>
+             </div>
           </div>
 
         </div>
-      </form>
+
+        {/* ====================
+            RIGHT COLUMN (Sidebar)
+        ==================== */}
+        <div className="lg:col-span-1 space-y-6">
+           
+           {/* 1. Status */}
+           <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+              <label className="block text-xs font-bold uppercase text-zinc-500 mb-4 tracking-wider">Status</label>
+              <select className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-lg text-sm font-bold focus:outline-none focus:border-black cursor-pointer appearance-none">
+                 <option>Active</option>
+                 <option>Draft</option>
+                 <option>Archived</option>
+              </select>
+              <div className="mt-4 pt-4 border-t border-zinc-100">
+                 <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Online Store</label>
+                 <p className="text-xs text-zinc-400">Schedule availability</p>
+              </div>
+           </div>
+
+           {/* 2. Organization */}
+           <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm space-y-5">
+              <label className="block text-xs font-bold uppercase text-zinc-500 tracking-wider">Product Organization</label>
+              
+              <div>
+                 <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Category</label>
+                 <select className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black">
+                    <option>Select...</option>
+                    <option>Streetwear</option>
+                    <option>Accessories</option>
+                 </select>
+              </div>
+
+              <div>
+                 <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Product Type</label>
+                 <input type="text" placeholder="e.g. T-Shirt" className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black" />
+              </div>
+
+              <div>
+                 <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Vendor</label>
+                 <input type="text" placeholder="e.g. Nike" className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black" />
+              </div>
+
+              <div>
+                 <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Collections</label>
+                 <input type="text" placeholder="Search collections..." className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black" />
+              </div>
+
+              <div>
+                 <label className="text-[10px] font-bold text-zinc-500 mb-1 block">Tags</label>
+                 <input type="text" placeholder="e.g. Summer, Cotton" className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black" />
+                 <p className="text-[10px] text-zinc-400 mt-1">Press enter to add</p>
+              </div>
+           </div>
+
+        </div>
+
+      </div>
     </div>
   );
 }

@@ -3,10 +3,13 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useCartStore } from "@/store/useCartStore"; // Assuming you have this
 import { 
-  HiOutlineTrash, 
   HiOutlineShoppingBag, 
   HiOutlineHeart,
+  HiXMark,
+  HiOutlineShare,
+  HiCheck
 } from "react-icons/hi2";
 
 // --- TYPES ---
@@ -49,126 +52,199 @@ const MOCK_WISHLIST: WishlistItem[] = [
     price: 4500,
     img: "/Hero/Product3.avif",
     slug: "limited-bomber",
-    inStock: false, // 🔴 Out of Stock Example
+    inStock: false, 
     size: "XL",
     color: "Olive",
+  },
+  {
+    id: 4,
+    name: "Tactical Cargo Pant",
+    price: 3200,
+    img: "/Hero/Product4.avif",
+    slug: "tactical-cargo",
+    inStock: true, 
+    size: "32",
+    color: "Camo",
   },
 ];
 
 export default function WishlistPage() {
   const [items, setItems] = useState<WishlistItem[]>(MOCK_WISHLIST);
-
-  // --- HANDLERS ---
+  const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [showToast, setShowToast] = useState<{msg: string, visible: boolean}>({ msg: "", visible: false });
   
+  const addItemToCart = useCartStore((state) => state.addItem); // Use real store
+
+  // --- LOGIC ---
+  const filteredItems = showInStockOnly ? items.filter(i => i.inStock) : items;
+
+  const showNotification = (msg: string) => {
+    setShowToast({ msg, visible: true });
+    setTimeout(() => setShowToast({ msg: "", visible: false }), 3000);
+  };
+
   const removeItem = (id: number) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   const moveToCart = (item: WishlistItem) => {
-    // 1. Logic to add to cart store would go here (e.g., addToCart(item))
-    alert(`Moved "${item.name}" to Cart!`);
+    // 1. Add to global cart store
+    addItemToCart({
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        size: item.size || "M",
+        color: item.color || "Standard",
+        img: item.img
+    });
+
+    // 2. Notify
+    showNotification(`Moved ${item.name} to Bag`);
     
-    // 2. Remove from wishlist after moving
+    // 3. Remove from wishlist
     removeItem(item.id);
   };
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    showNotification("Wishlist link copied to clipboard");
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-        My Wishlist <span className="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{items.length}</span>
-      </h2>
+    <div className="min-h-screen bg-white">
+      
+      {/* TOAST NOTIFICATION */}
+      <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-all duration-300 ${showToast.visible ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0 pointer-events-none'}`}>
+        <div className="bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+           <span className="bg-green-500 rounded-full p-0.5"><HiCheck className="text-white text-xs" /></span>
+           <span className="text-sm font-bold">{showToast.msg}</span>
+        </div>
+      </div>
 
-      {items.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {items.map((item) => (
-            <div 
-              key={item.id} 
-              className="group relative bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg hover:border-gray-200 transition-all duration-300"
-            >
+      {/* --- HEADER --- */}
+      <div className="border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-xl z-20">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+           <div>
+              <h1 className="text-3xl font-black uppercase tracking-tight text-gray-900">Wishlist <span className="text-gray-300 ml-1">({items.length})</span></h1>
+              <p className="text-sm text-gray-500 mt-1">Save your favorites for later.</p>
+           </div>
+           
+           <div className="flex items-center gap-4">
+              {/* Filter Toggle */}
+              <button 
+                onClick={() => setShowInStockOnly(!showInStockOnly)}
+                className={`text-xs font-bold uppercase tracking-wide px-4 py-2 rounded-full border transition-all ${
+                  showInStockOnly 
+                    ? "bg-black text-white border-black" 
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-900"
+                }`}
+              >
+                In Stock Only
+              </button>
               
-              {/* --- IMAGE AREA --- */}
-              <div className="relative aspect-[4/5] bg-gray-100">
-                <Image 
-                  src={item.img} 
-                  alt={item.name} 
-                  fill 
-                  className={`object-cover transition-transform duration-700 group-hover:scale-105 ${!item.inStock ? "grayscale opacity-80" : ""}`} 
-                />
-                
-                {/* Remove Button (Top Right) */}
-                <button 
-                  onClick={() => removeItem(item.id)}
-                  className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-white shadow-sm transition-colors z-10"
-                  title="Remove from wishlist"
-                >
-                  <HiOutlineTrash />
-                </button>
+              {/* Share Button */}
+              <button onClick={handleShare} className="p-2 text-gray-400 hover:text-black transition" title="Share Wishlist">
+                 <HiOutlineShare className="text-xl" />
+              </button>
+           </div>
+        </div>
+      </div>
 
-                {/* Stock Badge */}
-                {!item.inStock && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                    <span className="bg-black text-white text-xs font-bold px-3 py-1 uppercase tracking-widest rounded-full">
-                      Out of Stock
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* --- CONTENT AREA --- */}
-              <div className="p-5">
-                <Link href={`/product/${item.slug}`}>
-                  <h3 className="font-bold text-gray-900 truncate hover:underline underline-offset-2 decoration-gray-300">
-                    {item.name}
-                  </h3>
-                </Link>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
+        
+        {items.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-12">
+            
+            {filteredItems.map((item) => (
+              <div key={item.id} className="group flex flex-col">
                 
-                <div className="flex justify-between items-center mt-1 mb-4">
-                   <p className="text-gray-500 text-xs font-medium">
-                     {item.size} / {item.color}
-                   </p>
-                   <p className="font-bold text-black">₹{item.price.toLocaleString()}</p>
+                {/* IMAGE CONTAINER */}
+                <div className="relative aspect-[3/4] bg-gray-100 mb-4 overflow-hidden rounded-sm">
+                  <Image 
+                    src={item.img} 
+                    alt={item.name} 
+                    fill 
+                    className={`object-cover transition-transform duration-700 ease-in-out group-hover:scale-105 ${!item.inStock ? "opacity-60 grayscale" : ""}`} 
+                  />
+                  
+                  {/* Remove Button (Always visible but subtle) */}
+                  <button 
+                    onClick={(e) => { e.preventDefault(); removeItem(item.id); }}
+                    className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-black transition opacity-0 group-hover:opacity-100"
+                    title="Remove"
+                  >
+                    <HiXMark className="text-lg" />
+                  </button>
+
+                  {/* Stock Badge */}
+                  {!item.inStock && (
+                     <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-900">Sold Out</span>
+                     </div>
+                  )}
+
+                  {/* DESKTOP HOVER: QUICK ADD */}
+                  {item.inStock && (
+                    <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden lg:block">
+                      <button 
+                        onClick={() => moveToCart(item)}
+                        className="w-full bg-white text-black font-bold uppercase text-xs py-3.5 tracking-wider hover:bg-black hover:text-white transition shadow-lg"
+                      >
+                        Add to Bag - ₹{item.price.toLocaleString()}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* --- ACTION BUTTON --- */}
-                {item.inStock ? (
-                  <button 
-                    onClick={() => moveToCart(item)}
-                    className="w-full flex items-center justify-center gap-2 bg-black text-white py-3 rounded-xl text-sm font-bold hover:bg-zinc-800 transition shadow-md active:scale-95"
-                  >
-                    <HiOutlineShoppingBag className="text-lg" />
-                    Move to Cart
-                  </button>
-                ) : (
-                  <button 
-                    disabled
-                    className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 py-3 rounded-xl text-sm font-bold cursor-not-allowed"
-                  >
-                    Unavailable
-                  </button>
-                )}
-              </div>
+                {/* DETAILS */}
+                <div className="flex-1 flex flex-col">
+                   <div className="flex justify-between items-start">
+                      <Link href={`/product/${item.slug}`} className="group-hover:underline underline-offset-4 decoration-1">
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight leading-snug">{item.name}</h3>
+                      </Link>
+                   </div>
+                   
+                   <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-gray-500 font-medium capitalize">{item.color} / {item.size}</p>
+                      <p className="text-sm font-medium text-gray-900">₹{item.price.toLocaleString()}</p>
+                   </div>
 
-            </div>
-          ))}
-        </div>
-      ) : (
-        // --- EMPTY STATE ---
-        <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-center px-4">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-6 text-red-100">
-            <HiOutlineHeart className="text-4xl text-gray-300" />
+                   {/* MOBILE: ADD BUTTON (Visible always) */}
+                   <button 
+                     onClick={() => moveToCart(item)}
+                     disabled={!item.inStock}
+                     className="mt-4 lg:hidden w-full border border-gray-200 py-3 text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white hover:border-black transition disabled:opacity-50 disabled:cursor-not-allowed"
+                   >
+                     {item.inStock ? "Add to Bag" : "Unavailable"}
+                   </button>
+                </div>
+              </div>
+            ))}
+
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Your wishlist is empty</h3>
-          <p className="text-gray-500 max-w-sm mb-8">
-            Keep track of your favorite drops here. Dont let them sell out before you decide.
-          </p>
-          <Link 
-            href="/" 
-            className="bg-black text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-zinc-800 transition"
-          >
-            Explore Collection
-          </Link>
-        </div>
-      )}
+        ) : (
+          // --- EMPTY STATE (Editorial Style) ---
+          <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in zoom-in duration-500">
+             <div className="relative mb-6">
+                <HiOutlineHeart className="text-6xl text-gray-200" />
+                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
+                   <HiXMark className="text-sm text-gray-400" />
+                </div>
+             </div>
+             <h2 className="text-2xl font-black uppercase tracking-tight text-gray-900 mb-3">Your Wishlist is Empty</h2>
+             <p className="text-gray-500 max-w-sm mb-8 leading-relaxed">
+               Don't lose track of what you love. Tap the heart icon on any product to save it here.
+             </p>
+             <Link 
+               href="/products" 
+               className="bg-black text-white px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition hover:scale-105 active:scale-95"
+             >
+               Start Shopping
+             </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
