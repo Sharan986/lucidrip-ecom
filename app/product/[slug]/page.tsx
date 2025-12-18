@@ -1,27 +1,57 @@
-import { featuredItems } from "@/data/products"; // Ensure this path points to your data file
-import ProductUI from "@/components/ProductUI/ProductUI";
 import { notFound } from "next/navigation";
+import ProductUI from "@/components/ProductUI/ProductUI"; 
 
-// Define the type for the URL parameter 'slug'
-interface Props {
-  params: Promise<{ slug: string }>;
+// 1. Fetch Single Product
+async function getProduct(slug: string) {
+  try {
+    const res = await fetch(`http://localhost:5000/api/products/${slug}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (error) {
+    return null;
+  }
 }
 
-export default async function ProductDetailPage(props: Props) {
-  // 2. Await the params to get the slug text
-  const { slug } = await props.params;
+// 2. Fetch Related Products
+async function getRelatedProducts() {
+  try {
+    const res = await fetch("http://localhost:5000/api/products", { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const products = await res.json();
+    return products.slice(0, 4); 
+  } catch (error) {
+    return [];
+  }
+}
 
-  // 3. Find the product where the slug matches
-  const product = featuredItems.find((p) => p.slug === slug);
+// 3. MAIN COMPONENT (Updated for Next.js 15)
+// Notice the type definition change: params is now Promise<{ slug: string }>
+export default async function ProductPage({ 
+  params 
+}: { 
+  params: Promise<{ slug: string }> 
+}) {
+  
+  // ⚠️ CRITICAL FIX: You must await params before using the slug
+  const { slug } = await params;
 
-  // 4. If no product is found
-  if (!product) {
+  // Now use the unwrapped slug
+  const productData = await getProduct(slug);
+  const relatedData = await getRelatedProducts();
+
+  if (!productData) {
     notFound();
   }
 
+  // Filter out the current product from related items
+  const filteredRelated = relatedData.filter((p: any) => p._id !== productData._id);
+
   return (
-    <div className="max-w-7xl mx-auto px-5 py-12">
-      <ProductUI product={product} />
-    </div>
+    <ProductUI 
+      product={productData} 
+      relatedProducts={filteredRelated} 
+    />
   );
 }

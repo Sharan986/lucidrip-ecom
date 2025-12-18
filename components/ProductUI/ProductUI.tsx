@@ -5,39 +5,36 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "@/store/useCartStore"; 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { featuredItems } from "@/data/products"; // ✅ Import your real data
+// import { featuredItems } from "@/data/products"; <--- REMOVED
 
 // Icons
 import { 
   HiOutlineMinus, 
-  HiOutlinePlus, 
   HiCheck, 
   HiOutlineHeart,
   HiHeart,
   HiOutlineShare,
-  HiStar,
   HiOutlineShieldCheck
 } from "react-icons/hi2";
 import { GoPlus } from "react-icons/go";
 
-// --- TYPES ---
-// This matches your FeatureItem type structure
+
 export interface Product {
-  id: number;
+  _id: string;       
   name: string;
   slug: string;
   price: number;
-  img: string; 
-  images?: string[]; 
+  image: string;    
   description: string;
   sizes: string[];
   colors: string[];
-  inStock?: boolean; 
-  rating?: number;
-  reviews?: number;
+  stock: number;    
+  category?: string;
 }
 
-export default function ProductUI({ product }: { product: Product }) {
+// Props now accept product AND related products
+export default function ProductUI({ product, relatedProducts }: { product: Product, relatedProducts: Product[] }) {
+  
   // --- HOOKS ---
   const router = useRouter();
   const pathname = usePathname();
@@ -45,22 +42,20 @@ export default function ProductUI({ product }: { product: Product }) {
   const addItem = useCartStore((state) => state.addItem);
 
   // --- DATA LOGIC ---
-  // 1. Gallery: Use provided images or fallback to main image x4
-  const galleryImages = product.images && product.images.length > 0
-    ? product.images 
-    : [product.img, product.img, product.img, product.img];
+  
+  // 1. Gallery Logic (Backend only sends 1 image, so we duplicate it for the gallery view)
+  const galleryImages = [product.image, product.image, product.image, product.image];
     
-  // 2. Stock: Default to true if not specified
-  const isStocked = product.inStock ?? true; 
-
-  // 3. Related Products: Get 4 items from your data, excluding current one
-  const relatedProducts = featuredItems
-    .filter((item) => item.id !== product.id)
-    .slice(0, 4);
+  // 2. Stock Logic
+  const isStocked = product.stock > 0; 
 
   // --- URL STATE ---
-  const selectedSize = searchParams.get("size") || product.sizes[0];
-  const selectedColor = searchParams.get("color") || product.colors[0];
+  // Safe navigation: ensure arrays exist before accessing [0]
+  const defaultSize = product.sizes?.length > 0 ? product.sizes[0] : "M";
+  const defaultColor = product.colors?.length > 0 ? product.colors[0] : "Black";
+
+  const selectedSize = searchParams.get("size") || defaultSize;
+  const selectedColor = searchParams.get("color") || defaultColor;
 
   // --- LOCAL STATE ---
   const [quantity, setQuantity] = useState(1);
@@ -81,13 +76,13 @@ export default function ProductUI({ product }: { product: Product }) {
     setIsAdding(true);
 
     addItem({
-      productId: product.id,
+      productId: product._id, // CHANGED: id -> _id
       name: product.name,
       price: product.price,
       quantity: quantity,
       size: selectedSize,
       color: selectedColor,
-      img: product.img,
+      img: product.image,     // CHANGED: img -> image
     });
 
     setTimeout(() => {
@@ -110,7 +105,6 @@ export default function ProductUI({ product }: { product: Product }) {
       brown: "#A52A2A", "neon green": "#39FF14", "washed black": "#1F1F1F",
       "faded blue": "#778899", sage: "#9DC183", oatmeal: "#E0DCC8"
     };
-    // Handle split colors like "Navy/White" for gradients
     if (name.includes("/")) {
       return `linear-gradient(to bottom right, ${map[name.split("/")[0].toLowerCase()] || 'gray'}, ${map[name.split("/")[1].toLowerCase()] || 'white'})`;
     }
@@ -177,34 +171,38 @@ export default function ProductUI({ product }: { product: Product }) {
               {/* Selectors */}
               <div className="space-y-6 mb-8">
                 {/* Color */}
-                <div>
-                  <span className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-3 block">Color: <span className="text-gray-500">{selectedColor}</span></span>
-                  <div className="flex gap-3 flex-wrap">
-                    {product.colors.map((color) => {
-                      const bg = getColorCode(color);
-                      return (
-                        <button key={color} onClick={() => updateURL("color", color)} className={`w-10 h-10 rounded-full flex items-center justify-center border ${selectedColor === color ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}>
-                          <div className="w-8 h-8 rounded-full border border-gray-100" style={{ background: bg }} />
-                        </button>
-                      );
-                    })}
+                {product.colors && product.colors.length > 0 && (
+                  <div>
+                    <span className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-3 block">Color: <span className="text-gray-500">{selectedColor}</span></span>
+                    <div className="flex gap-3 flex-wrap">
+                      {product.colors.map((color) => {
+                        const bg = getColorCode(color);
+                        return (
+                          <button key={color} onClick={() => updateURL("color", color)} className={`w-10 h-10 rounded-full flex items-center justify-center border ${selectedColor === color ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}>
+                            <div className="w-8 h-8 rounded-full border border-gray-100" style={{ background: bg }} />
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Size */}
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Size: {selectedSize}</span>
-                    <button className="text-xs underline text-gray-500">Size Guide</button>
+                {product.sizes && product.sizes.length > 0 && (
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Size: {selectedSize}</span>
+                      <button className="text-xs underline text-gray-500">Size Guide</button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {product.sizes.map((size) => (
+                        <button key={size} onClick={() => updateURL("size", size)} className={`py-3 rounded-lg text-sm font-bold border ${selectedSize === size ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-black'}`}>
+                          {size}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {product.sizes.map((size) => (
-                      <button key={size} onClick={() => updateURL("size", size)} className={`py-3 rounded-lg text-sm font-bold border ${selectedSize === size ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-black'}`}>
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Desktop CTA */}
@@ -248,7 +246,7 @@ export default function ProductUI({ product }: { product: Product }) {
         </div>
 
         {/* =================================================
-            RECOMMENDED PRODUCTS SECTION (From your Data)
+            RECOMMENDED PRODUCTS SECTION (From Backend)
         ================================================= */}
         <div className="border-t border-gray-100 pt-16">
            <div className="flex justify-between items-end mb-8">
@@ -256,13 +254,12 @@ export default function ProductUI({ product }: { product: Product }) {
               <Link href="/products" className="text-sm font-bold underline underline-offset-4 hidden md:block">View All</Link>
            </div>
            
-           {/* Recommendation Grid */}
            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 md:grid md:grid-cols-4 md:gap-6 pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
               {relatedProducts.map((item) => (
-                 <Link href={`/product/${item.slug}`} key={item.id} className="snap-start flex-shrink-0 w-[260px] md:w-auto group cursor-pointer block">
+                 <Link href={`/product/${item.slug}`} key={item._id} className="snap-start flex-shrink-0 w-[260px] md:w-auto group cursor-pointer block">
                     <div className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden mb-4">
                        <Image 
-                         src={item.img} 
+                         src={item.image} 
                          alt={item.name} 
                          fill 
                          className="object-cover transition-transform duration-700 group-hover:scale-105" 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { featuredItems } from "@/data/products";
+// import { featuredItems } from "@/data/products"; <--- REMOVED STATIC DATA
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/useCartStore";
@@ -9,7 +9,6 @@ import {
   HiOutlineShoppingBag, 
   HiCheck, 
   HiChevronDown, 
-  HiAdjustmentsHorizontal,
   HiOutlineHeart,
   HiHeart,
   HiSquares2X2,
@@ -17,13 +16,26 @@ import {
   HiOutlineFunnel
 } from "react-icons/hi2";
 
-// --- TYPES ---
+// --- 1. ADDED INTERFACE FOR BACKEND DATA ---
+interface Product {
+  _id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  image: string;    // Backend uses 'image'
+  category: string;
+  sizes: string[];
+  colors: string[];
+  stock: number;
+}
+
 type SortOption = "newest" | "price-low" | "price-high";
 type FilterOption = "all" | "hoodies" | "tees" | "pants" | "accessories";
 type ViewMode = "grid" | "list";
 
-// --- COMPONENT: PRODUCT CARD (Optimized) ---
-const ProductCard = ({ item, viewMode }: { item: any, viewMode: ViewMode }) => {
+// --- COMPONENT: PRODUCT CARD (Original Design Preserved) ---
+const ProductCard = ({ item, viewMode, index }: { item: Product, viewMode: ViewMode, index: number }) => {
   const addItem = useCartStore((state) => state.addItem);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,13 +49,13 @@ const ProductCard = ({ item, viewMode }: { item: any, viewMode: ViewMode }) => {
 
     // Add default variant
     addItem({
-      productId: item.id,
+      productId: item._id, // CHANGED: id -> _id
       name: item.name,
       price: item.price,
       quantity: 1,
-      size: "M", // Default
-      color: "Black", // Default
-      img: item.img,
+      size: item.sizes?.[0] || "M", 
+      color: item.colors?.[0] || "Black",
+      img: item.image,     // CHANGED: item.img -> item.image
     });
 
     setTimeout(() => {
@@ -71,7 +83,7 @@ const ProductCard = ({ item, viewMode }: { item: any, viewMode: ViewMode }) => {
         className={`relative block overflow-hidden bg-gray-100 ${viewMode === 'list' ? 'w-1/3 max-w-[200px] aspect-[3/4]' : 'w-full aspect-[3/4]'}`}
       >
         <Image
-          src={item.img}
+          src={item.image} // CHANGED: item.img -> item.image
           alt={item.name}
           fill
           className={`object-cover object-center transition-transform duration-700 ease-in-out ${isHovered ? 'scale-110' : 'scale-100'}`}
@@ -110,7 +122,8 @@ const ProductCard = ({ item, viewMode }: { item: any, viewMode: ViewMode }) => {
           {item.price > 10000 && (
              <span className="bg-black text-white text-[10px] font-bold uppercase px-2 py-1 tracking-wider">Premium</span>
           )}
-          {item.id % 3 === 0 && (
+          {/* CHANGED: Used index instead of item.id % 3 because MongoDB IDs are strings */}
+          {index % 3 === 0 && (
              <span className="bg-white text-black text-[10px] font-bold uppercase px-2 py-1 tracking-wider shadow-sm">New</span>
           )}
         </div>
@@ -148,28 +161,45 @@ const ProductCard = ({ item, viewMode }: { item: any, viewMode: ViewMode }) => {
 // --- MAIN PAGE COMPONENT ---
 const ProductsList = () => {
   // --- STATE ---
+  const [products, setProducts] = useState<Product[]>([]); // CHANGED: State for backend data
   const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
   const [activeSort, setActiveSort] = useState<SortOption>("newest");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [visibleCount, setVisibleCount] = useState(8); // Pagination simulation
+  const [visibleCount, setVisibleCount] = useState(8); 
 
-  // --- INITIAL LOAD SIMULATION ---
+  // --- 2. FETCH FROM BACKEND ---
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/products");
+        const data = await res.json();
+        // Fallback to empty array if fetch fails to prevent crash
+        if (Array.isArray(data)) {
+            setProducts(data);
+        }
+      } catch (error) {
+        console.error("Backend Error:", error);
+      } finally {
+        // Keep your original loading animation timing
+        setTimeout(() => setIsLoading(false), 800);
+      }
+    };
+    fetchProducts();
   }, []);
 
   // --- FILTER & SORT LOGIC ---
   const filteredProducts = useMemo(() => {
-    let result = [...featuredItems];
+    let result = [...products]; // CHANGED: using 'products' state instead of 'featuredItems'
 
     // Filter
     if (activeFilter !== "all") {
       result = result.filter((item) => {
         const name = item.name.toLowerCase();
-        if (activeFilter === "hoodies") return name.includes("hoodie") || name.includes("pullover");
-        if (activeFilter === "tees") return name.includes("tee") || name.includes("top");
+        const cat = item.category?.toLowerCase() || ""; // Safe check
+        
+        if (activeFilter === "hoodies") return name.includes("hoodie") || name.includes("pullover") || cat.includes("hoodies");
+        if (activeFilter === "tees") return name.includes("tee") || name.includes("top") || cat.includes("tops");
         if (activeFilter === "pants") return name.includes("pant") || name.includes("sweat");
         return true;
       });
@@ -180,7 +210,7 @@ const ProductsList = () => {
     if (activeSort === "price-high") result.sort((a, b) => b.price - a.price);
 
     return result;
-  }, [activeFilter, activeSort]);
+  }, [products, activeFilter, activeSort]);
 
   // Handle Load More
   const visibleProducts = filteredProducts.slice(0, visibleCount);
@@ -304,8 +334,13 @@ const ProductsList = () => {
           <>
             {/* Product Grid */}
             <div className={`grid ${viewMode === 'list' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} gap-x-4 md:gap-x-6 gap-y-12`}>
-              {visibleProducts.map((item) => (
-                <ProductCard key={item.id} item={item} viewMode={viewMode} />
+              {visibleProducts.map((item, index) => (
+                <ProductCard 
+                  key={item._id} // CHANGED: Using _id
+                  item={item} 
+                  viewMode={viewMode}
+                  index={index} 
+                />
               ))}
             </div>
 
@@ -313,7 +348,7 @@ const ProductsList = () => {
             {visibleCount < filteredProducts.length && (
               <div className="mt-20 text-center">
                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-                    Showing {visibleProducts.length} of {filteredProducts.length}
+                   Showing {visibleProducts.length} of {filteredProducts.length}
                  </p>
                  <div className="w-48 h-1 bg-gray-100 mx-auto rounded-full mb-8 overflow-hidden">
                     <div 
