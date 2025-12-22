@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  HiOutlineLifebuoy, 
+  HiOutlineQuestionMarkCircle, 
   HiOutlineChatBubbleLeftRight, 
-  HiOutlineEnvelope, 
   HiMagnifyingGlass, 
   HiOutlineTicket,
   HiChevronDown,
@@ -12,18 +12,16 @@ import {
   HiXMark,
   HiOutlineShoppingBag,
   HiOutlineCurrencyRupee,
-  HiOutlineArrowPathRoundedSquare,
-  HiArrowUpTray, // 👈 1. CHANGED THIS (Fixed Import)
-  HiCheckCircle,
-  HiOutlineExclamationCircle
+  HiOutlineArrowPath,
+  HiArrowUpTray,
+  HiCheck
 } from "react-icons/hi2";
 
-// --- DUMMY DATA ---
 const FAQ_CATEGORIES = [
   { id: "orders", label: "Orders & Shipping", icon: HiOutlineShoppingBag },
-  { id: "returns", label: "Returns & Refunds", icon: HiOutlineArrowPathRoundedSquare },
+  { id: "returns", label: "Returns & Refunds", icon: HiOutlineArrowPath },
   { id: "payments", label: "Payments & Offers", icon: HiOutlineCurrencyRupee },
-  { id: "account", label: "Account Settings", icon: HiOutlineLifebuoy },
+  { id: "account", label: "Account Settings", icon: HiOutlineQuestionMarkCircle },
 ];
 
 const FAQ_DATA = [
@@ -31,6 +29,8 @@ const FAQ_DATA = [
   { id: 2, catId: "returns", q: "How do I return an item?", a: "We offer a 7-day return policy. Go to 'Orders', select the item, and click 'Request Return'. Pickup is within 48 hours." },
   { id: 3, catId: "payments", q: "Payment failed but money deducted?", a: "If the order wasn't generated, the amount will be auto-refunded to your source account within 5-7 business days." },
   { id: 4, catId: "orders", q: "Can I change my address?", a: "You can change the address before the item is shipped by contacting support. After shipping, it cannot be changed." },
+  { id: 5, catId: "returns", q: "What is the return window?", a: "You have 7 days from delivery to initiate a return for most items. Some categories may have different policies." },
+  { id: 6, catId: "account", q: "How do I update my profile?", a: "Go to Profile settings and click on the field you want to update. Don't forget to save your changes." },
 ];
 
 const RECENT_ORDERS = [
@@ -38,7 +38,7 @@ const RECENT_ORDERS = [
   { id: "ORD-8819", date: "Nov 20", items: "Urban Cargo Sweatshirt", total: "₹2,100" },
 ];
 
-const ISSUE_TYPES = {
+const ISSUE_TYPES: { [key: string]: string[] } = {
   "Orders & Shipping": ["Where is my order?", "Item marked delivered but not received", "Wrong item received", "Package arrived damaged"],
   "Returns & Refunds": ["Request a return", "Refund status", "Exchange size/color", "Item defective"],
   "Payments": ["Payment failed", "Double deduction", "Invoice request", "Coupon code issue"],
@@ -51,12 +51,10 @@ export default function SupportPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [openFaqId, setOpenFaqId] = useState<number | null>(null);
   
-  // Ticket State
   const [tickets, setTickets] = useState([{ id: "TKT-9901", subject: "Wrong size received", category: "Returns & Refunds", date: "Dec 10", status: "Open" }]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State
   const [category, setCategory] = useState("Orders & Shipping");
   const [specificIssue, setSpecificIssue] = useState("");
   const [selectedOrder, setSelectedOrder] = useState("");
@@ -64,7 +62,6 @@ export default function SupportPage() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- LOGIC ---
   const filteredFaqs = FAQ_DATA.filter(faq => {
     const matchesSearch = faq.q.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "all" || faq.catId === selectedCategory;
@@ -93,7 +90,6 @@ export default function SupportPage() {
       setTickets([createdTicket, ...tickets]); 
       setIsSubmitting(false);
       setIsModalOpen(false);
-      // Reset form
       setCategory("Orders & Shipping");
       setSpecificIssue("");
       setSelectedOrder("");
@@ -104,211 +100,392 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-20">
-      
-      {/* HEADER */}
-      <div className="bg-gray-50 border-b border-gray-100 py-16 text-center px-4">
-         <h1 className="text-3xl font-black text-gray-900 tracking-tight mb-4">How can we help?</h1>
-         <div className="max-w-2xl mx-auto relative">
-            <HiMagnifyingGlass className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
-            <input 
-              type="text" 
-              placeholder="Search for answers..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 rounded-full border border-gray-200 shadow-sm focus:border-black focus:ring-2 focus:ring-black/5 outline-none transition text-base font-medium"
-            />
-         </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 md:px-8 -mt-8">
-        
-        {/* TABS */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-2 inline-flex gap-2 mb-12">
-           <button onClick={() => setActiveTab("help")} className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === "help" ? "bg-black text-white shadow-md" : "text-gray-500 hover:bg-gray-50"}`}>Help Center</button>
-           <button onClick={() => setActiveTab("tickets")} className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === "tickets" ? "bg-black text-white shadow-md" : "text-gray-500 hover:bg-gray-50"}`}>My Tickets</button>
+    <div className="relative">
+      {/* Header */}
+      <div className="bg-white border border-neutral-200 p-6 md:p-8 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 mb-1">
+              Help Center
+            </p>
+            <h2 className="text-2xl font-extralight tracking-wide">
+              How can we <span className="italic">help</span>?
+            </h2>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 text-xs tracking-[0.1em] uppercase hover:bg-neutral-800 transition"
+          >
+            <HiPlus className="w-4 h-4" />
+            New Ticket
+          </button>
         </div>
 
-        {/* VIEW: HELP CENTER */}
-        {activeTab === "help" && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                {FAQ_CATEGORIES.map((cat) => {
-                  const Icon = cat.icon;
-                  const isActive = selectedCategory === cat.id;
-                  return (
-                    <button key={cat.id} onClick={() => setSelectedCategory(isActive ? "all" : cat.id)} className={`p-6 rounded-2xl border text-left transition-all ${isActive ? "border-black bg-gray-900 text-white" : "border-gray-200 bg-white hover:border-gray-400"}`}>
-                       <Icon className={`text-2xl mb-3 ${isActive ? "text-white" : "text-gray-900"}`} />
-                       <p className="font-bold text-sm">{cat.label}</p>
-                    </button>
-                  )
-                })}
-             </div>
+        {/* Search */}
+        <div className="relative">
+          <HiMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+          <input 
+            type="text" 
+            placeholder="Search for answers..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 border border-neutral-200 text-sm font-light focus:outline-none focus:border-neutral-900 transition"
+          />
+        </div>
 
-             <div className="max-w-3xl mx-auto space-y-4">
-                {filteredFaqs.map((faq) => (
-                  <div key={faq.id} className="border-b border-gray-100">
-                     <button onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)} className="w-full flex justify-between items-center py-5 text-left group">
-                        <span className="font-bold text-gray-900 group-hover:text-gray-600 transition">{faq.q}</span>
-                        <div className={`w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center transition-all ${openFaqId === faq.id ? "bg-black border-black text-white rotate-180" : "bg-white text-gray-400"}`}><HiChevronDown /></div>
-                     </button>
-                     <div className={`overflow-hidden transition-all duration-300 ${openFaqId === faq.id ? "max-h-40 pb-6 opacity-100" : "max-h-0 opacity-0"}`}>
-                        <p className="text-gray-500 leading-relaxed text-sm">{faq.a}</p>
-                     </div>
-                  </div>
-                ))}
-             </div>
-
-             <div className="mt-16 bg-gray-50 rounded-2xl p-8 text-center border border-gray-200">
-                <h3 className="text-xl font-black text-gray-900 mb-2">Still need help?</h3>
-                <div className="flex justify-center gap-4 mt-6">
-                   <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-zinc-800 transition shadow-lg"><HiOutlineTicket /> Raise a Ticket</button>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {/* VIEW: TICKETS */}
-        {activeTab === "tickets" && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-left">
-                   <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      <tr><th className="py-4 px-6">ID</th><th className="py-4 px-6 w-1/2">Subject</th><th className="py-4 px-6">Date</th><th className="py-4 px-6 text-right">Status</th></tr>
-                   </thead>
-                   <tbody className="divide-y divide-gray-100">
-                      {tickets.map((t) => (
-                         <tr key={t.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
-                            <td className="py-5 px-6 font-mono text-xs font-bold text-gray-500">{t.id}</td>
-                            <td className="py-5 px-6"><p className="font-bold text-gray-900 text-sm">{t.subject}</p><p className="text-xs text-gray-400 mt-0.5">{t.category}</p></td>
-                            <td className="py-5 px-6 text-xs text-gray-500 font-medium">{t.date}</td>
-                            <td className="py-5 px-6 text-right"><span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border border-green-200 bg-green-100 text-green-700">{t.status}</span></td>
-                         </tr>
-                      ))}
-                   </tbody>
-                </table>
-             </div>
-          </div>
-        )}
-
+        {/* Tabs */}
+        <div className="flex gap-4 mt-6 border-b border-neutral-100">
+          {[
+            { id: "help", label: "Help Center" },
+            { id: "tickets", label: "My Tickets" }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as "help" | "tickets")}
+              className={`pb-4 text-sm font-light transition relative ${
+                activeTab === tab.id ? "text-neutral-900" : "text-neutral-400 hover:text-neutral-600"
+              }`}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.span 
+                  layoutId="supportTab"
+                  className="absolute bottom-0 left-0 w-full h-[1px] bg-neutral-900"
+                />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* =========================================
-          INDUSTRY STANDARD TICKET MODAL
-      ========================================= */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-hide">
+      {/* Help Center Tab */}
+      <AnimatePresence mode="wait">
+        {activeTab === "help" && (
+          <motion.div
+            key="help"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            {/* Categories */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {FAQ_CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                const isActive = selectedCategory === cat.id;
+                return (
+                  <button 
+                    key={cat.id} 
+                    onClick={() => setSelectedCategory(isActive ? "all" : cat.id)} 
+                    className={`p-5 border text-left transition-all ${
+                      isActive 
+                        ? "border-neutral-900 bg-neutral-900 text-white" 
+                        : "border-neutral-200 bg-white hover:border-neutral-400"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 mb-3 ${isActive ? "text-white" : "text-neutral-600"}`} />
+                    <p className="text-xs tracking-[0.05em]">{cat.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* FAQs */}
+            <div className="bg-white border border-neutral-200">
+              <div className="p-6 border-b border-neutral-100">
+                <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                  Frequently Asked Questions
+                </p>
+              </div>
+              <div className="divide-y divide-neutral-100">
+                {filteredFaqs.length === 0 ? (
+                  <div className="p-8 text-center text-neutral-500 text-sm">
+                    No results found for "{searchQuery}"
+                  </div>
+                ) : (
+                  filteredFaqs.map((faq) => (
+                    <div key={faq.id} className="border-neutral-100">
+                      <button
+                        onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
+                        className="w-full p-6 flex items-center justify-between text-left hover:bg-neutral-50 transition"
+                      >
+                        <span className="text-sm font-light text-neutral-900">{faq.q}</span>
+                        <HiChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${
+                          openFaqId === faq.id ? "rotate-180" : ""
+                        }`} />
+                      </button>
+                      <AnimatePresence>
+                        {openFaqId === faq.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <p className="px-6 pb-6 text-sm text-neutral-600 font-light leading-relaxed">
+                              {faq.a}
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Contact Options */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white border border-neutral-200 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 border border-neutral-200 flex items-center justify-center">
+                    <HiOutlineChatBubbleLeftRight className="w-5 h-5 text-neutral-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-light">Live Chat</p>
+                    <p className="text-xs text-neutral-500">Available 9 AM - 9 PM</p>
+                  </div>
+                </div>
+                <button className="w-full border border-neutral-200 py-3 text-xs tracking-[0.1em] uppercase hover:border-neutral-900 transition">
+                  Start Chat
+                </button>
+              </div>
+              <div className="bg-white border border-neutral-200 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 border border-neutral-200 flex items-center justify-center">
+                    <HiOutlineTicket className="w-5 h-5 text-neutral-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-light">Email Support</p>
+                    <p className="text-xs text-neutral-500">Response within 24 hours</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="w-full border border-neutral-200 py-3 text-xs tracking-[0.1em] uppercase hover:border-neutral-900 transition"
+                >
+                  Create Ticket
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tickets Tab */}
+        {activeTab === "tickets" && (
+          <motion.div
+            key="tickets"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="bg-white border border-neutral-200">
+              <div className="p-6 border-b border-neutral-100">
+                <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                  Your Support Tickets
+                </p>
+              </div>
               
-              <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
-                 <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Submit Request</h3>
-                 <button onClick={() => setIsModalOpen(false)}><HiXMark className="text-xl" /></button>
+              {tickets.length === 0 ? (
+                <div className="p-16 text-center">
+                  <div className="w-16 h-16 border border-neutral-200 flex items-center justify-center mx-auto mb-6">
+                    <HiOutlineTicket className="w-8 h-8 text-neutral-300" />
+                  </div>
+                  <p className="text-sm text-neutral-500 mb-4">No support tickets yet</p>
+                  <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-neutral-900 text-white px-6 py-3 text-xs tracking-[0.1em] uppercase"
+                  >
+                    Create Your First Ticket
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-100">
+                  {tickets.map((ticket, i) => (
+                    <motion.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="p-6 flex items-center justify-between hover:bg-neutral-50 transition"
+                    >
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="font-mono text-sm">{ticket.id}</span>
+                          <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                            ticket.status === "Open" 
+                              ? "bg-amber-50 text-amber-700 border border-amber-200" 
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          }`}>
+                            {ticket.status}
+                          </span>
+                        </div>
+                        <p className="text-sm font-light text-neutral-900">{ticket.subject}</p>
+                        <p className="text-xs text-neutral-500 mt-1">{ticket.category} · {ticket.date}</p>
+                      </div>
+                      <HiChevronDown className="w-4 h-4 text-neutral-400 -rotate-90" />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Ticket Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsModalOpen(false)}
+              className="fixed inset-0 bg-neutral-900/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed inset-x-4 top-[5%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-lg bg-white z-50 max-h-[90vh] overflow-y-auto"
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b border-neutral-200 p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 mb-1">
+                    Support
+                  </p>
+                  <h3 className="text-xl font-extralight">Create Ticket</h3>
+                </div>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-neutral-100 transition"
+                >
+                  <HiXMark className="w-5 h-5" />
+                </button>
               </div>
 
-              <form onSubmit={handleSubmitTicket} className="p-8 space-y-6">
-                 
-                 {/* 1. Category Selection */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">What can we help with?</label>
-                    <select 
-                      value={category}
-                      onChange={(e) => { setCategory(e.target.value); setSpecificIssue(""); }}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm font-bold text-gray-900 focus:border-black transition"
-                    >
-                       {Object.keys(ISSUE_TYPES).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                 </div>
+              {/* Form */}
+              <form onSubmit={handleSubmitTicket} className="p-6 space-y-6">
+                {/* Category */}
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                    Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => { setCategory(e.target.value); setSpecificIssue(""); }}
+                    className="w-full border border-neutral-200 px-4 py-3 text-sm font-light focus:outline-none focus:border-neutral-900 transition bg-white"
+                  >
+                    {Object.keys(ISSUE_TYPES).map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
 
-                 {/* 2. Specific Issue (Dynamic) */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Select Issue Details</label>
-                    <select 
-                      value={specificIssue}
-                      onChange={(e) => setSpecificIssue(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-gray-900 focus:border-black transition"
-                      required
-                    >
-                       <option value="">Select a reason...</option>
-                       {ISSUE_TYPES[category as keyof typeof ISSUE_TYPES].map(issue => (
-                          <option key={issue} value={issue}>{issue}</option>
-                       ))}
-                    </select>
-                 </div>
+                {/* Specific Issue */}
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                    Issue Type
+                  </label>
+                  <select
+                    value={specificIssue}
+                    onChange={(e) => setSpecificIssue(e.target.value)}
+                    className="w-full border border-neutral-200 px-4 py-3 text-sm font-light focus:outline-none focus:border-neutral-900 transition bg-white"
+                  >
+                    <option value="">Select an issue</option>
+                    {ISSUE_TYPES[category]?.map((issue) => (
+                      <option key={issue} value={issue}>{issue}</option>
+                    ))}
+                  </select>
+                </div>
 
-                 {/* 3. Smart Order Selector (Only shows for Orders/Returns) */}
-                 {(category === "Orders & Shipping" || category === "Returns & Refunds") && (
-                    <div className="space-y-2">
-                       <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Which order is this about?</label>
-                       <div className="grid gap-3 max-h-40 overflow-y-auto scrollbar-hide">
-                          {RECENT_ORDERS.map(order => (
-                             <div 
-                               key={order.id} 
-                               onClick={() => setSelectedOrder(order.id)}
-                               className={`p-3 border rounded-lg cursor-pointer transition-all flex justify-between items-center ${selectedOrder === order.id ? 'border-black bg-gray-50 ring-1 ring-black' : 'border-gray-200 hover:border-gray-400'}`}
-                             >
-                                <div>
-                                   <p className="text-xs font-bold text-gray-900">#{order.id} • <span className="font-normal text-gray-500">{order.date}</span></p>
-                                   <p className="text-[10px] text-gray-500 truncate w-48">{order.items}</p>
-                                </div>
-                                {selectedOrder === order.id && <HiCheckCircle className="text-black text-xl" />}
-                             </div>
-                          ))}
-                       </div>
-                    </div>
-                 )}
+                {/* Related Order */}
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                    Related Order (Optional)
+                  </label>
+                  <select
+                    value={selectedOrder}
+                    onChange={(e) => setSelectedOrder(e.target.value)}
+                    className="w-full border border-neutral-200 px-4 py-3 text-sm font-light focus:outline-none focus:border-neutral-900 transition bg-white"
+                  >
+                    <option value="">Select an order</option>
+                    {RECENT_ORDERS.map((order) => (
+                      <option key={order.id} value={order.id}>
+                        {order.id} - {order.items} ({order.total})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                 {/* 4. Description */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Additional Details</label>
-                    <textarea 
-                      rows={3}
-                      required
-                      placeholder="Please describe the issue..."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium focus:border-black transition resize-none"
-                    />
-                 </div>
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                    Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Describe your issue in detail..."
+                    className="w-full border border-neutral-200 px-4 py-3 text-sm font-light focus:outline-none focus:border-neutral-900 transition resize-none"
+                  />
+                </div>
 
-                 {/* 5. File Upload (For Evidence) */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Attachments (Optional)</label>
-                    <div 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition bg-gray-50"
-                    >
-                       <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} />
-                       {attachment ? (
-                          <div className="flex items-center justify-center gap-2 text-sm font-bold text-black">
-                             <HiCheckCircle className="text-green-500" /> {attachment.name}
-                          </div>
-                       ) : (
-                          <div className="flex flex-col items-center gap-1 text-gray-400">
-                             <HiArrowUpTray className="text-2xl" /> {/* 👈 2. USED CORRECT ICON HERE */}
-                             <span className="text-xs font-medium">Click to upload photo or screenshot</span>
-                          </div>
-                       )}
-                    </div>
-                 </div>
-
-                 {/* Submit */}
-                 <button 
-                   type="submit" 
-                   disabled={isSubmitting}
-                   className="w-full bg-black text-white font-bold uppercase tracking-widest text-xs py-4 rounded-xl hover:bg-zinc-800 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                 >
-                    {isSubmitting ? (
-                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                {/* Attachment */}
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+                    Attachment (Optional)
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*,.pdf"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border border-dashed border-neutral-300 p-6 flex flex-col items-center gap-2 hover:border-neutral-400 transition"
+                  >
+                    {attachment ? (
+                      <>
+                        <HiCheck className="w-5 h-5 text-emerald-600" />
+                        <span className="text-sm text-neutral-600">{attachment.name}</span>
+                      </>
                     ) : (
-                       "Submit Ticket"
+                      <>
+                        <HiArrowUpTray className="w-5 h-5 text-neutral-400" />
+                        <span className="text-xs text-neutral-500">Upload screenshot or file</span>
+                      </>
                     )}
-                 </button>
+                  </button>
+                </div>
 
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-neutral-900 text-white py-4 text-xs tracking-[0.1em] uppercase hover:bg-neutral-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border border-white border-t-transparent animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Ticket"
+                  )}
+                </button>
               </form>
-           </div>
-        </div>
-      )}
-
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

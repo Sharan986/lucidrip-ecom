@@ -8,6 +8,8 @@ export interface IProduct extends Document {
   image: string;      
   sizes: string[];    
   colors: string[];    
+  stock: number;
+  category: string;
 }
 
 const ProductSchema: Schema = new Schema(
@@ -19,6 +21,8 @@ const ProductSchema: Schema = new Schema(
     image: { type: String, required: true },
     sizes: { type: [String], required: true },  // Array of strings
     colors: { type: [String], required: true }, // Array of strings
+    stock: { type: Number, required: true, default: 0 },
+    category: { type: String, default: "General" },
   },
   {
     timestamps: true,

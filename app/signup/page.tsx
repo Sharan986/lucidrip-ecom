@@ -1,223 +1,210 @@
 "use client";
 
-
-import Link from "next/link";
+import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, SubmitHandler } from "react-hook-form"; // 👈 Import Hook Form
-import { HiOutlineArrowRight, HiExclamationCircle } from "react-icons/hi2";
-import { FcGoogle } from "react-icons/fc"; 
-import { FaApple } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { useAuthStore } from "@/store/useAuthStore";
+import { 
+  HiOutlineEnvelope, 
+  HiOutlineLockClosed, 
+  HiOutlineUser,
+  HiArrowRight,
+  HiEye,
+  HiEyeSlash,
+  HiCheck,
+  HiExclamationCircle
+} from "react-icons/hi2";
 
-// 1. Define Form Types
-type SignupInputs = {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
+// 1. Validation Schema
+const signupSchema = yup.object({
+  name: yup.string().min(2, "Name is too short").required("Full name is required"),
+  email: yup.string().email("Invalid email address").required("Email is required"),
+  phone: yup.string()
+    .matches(/^[0-9+ ]+$/, "Invalid phone number")
+    .min(10, "Phone number is too short")
+    .required("Phone number is required"),
+  password: yup.string()
+    .min(8, "Password must be at least 8 characters")
+    .matches(/[A-Z]/, "Must contain one uppercase letter")
+    .matches(/[a-z]/, "Must contain one lowercase letter")
+    .matches(/[0-9]/, "Must contain one number")
+    .required("Password is required"),
+  confirmPassword: yup.string()
+    .oneOf([yup.ref('password')], "Passwords must match")
+    .required("Please confirm your password"),
+}).required();
+
+type SignupFormData = yup.InferType<typeof signupSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const { register: registerUser, error: authError } = useAuthStore();
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [socialToast, setSocialToast] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   // 2. Initialize Hook Form
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors, isSubmitting } 
-  } = useForm<SignupInputs>();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<SignupFormData>({
+    resolver: yupResolver(signupSchema),
+    mode: "onChange" // Allows real-time password requirement updates
+  });
 
-  // 3. Handle Real Submission
-  const onSubmit: SubmitHandler<SignupInputs> = async (data) => {
-    // Data is already validated here
-    console.log("Form Data:", data);
+  // Watch password value for the real-time requirement checklist
+  const watchedPassword = watch("password", "");
 
-    // SIMULATE API CALL
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  const passwordChecks = {
+    length: watchedPassword.length >= 8,
+    uppercase: /[A-Z]/.test(watchedPassword),
+    lowercase: /[a-z]/.test(watchedPassword),
+    number: /[0-9]/.test(watchedPassword),
+  };
+
+  const onSubmit = async (data: SignupFormData) => {
+    setServerError("");
+    setIsLoading(true);
     
-    // Normally you'd redirect to dashboard or trigger verification
-    router.push("/account"); 
-    alert("Account created successfully!");
+    const success = await registerUser(data.name, data.email, data.password, data.phone);
+    
+    if (success) {
+      router.push("/");
+    } else {
+      setServerError(authError || "Registration failed. Please try again.");
+    }
+    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
-      
-      {/* --- LEFT SIDE: BRAND IMAGE --- */}
-      <div className="hidden lg:block relative w-1/2 bg-zinc-900 overflow-hidden">
-        <div className="absolute inset-0 bg-black/20 z-10"></div>
-        <Image 
-          src="/Hero/About@.avif"
-          alt="Streetwear Aesthetic"
-          fill
-          className="object-cover "
-          priority
-        />
-        <div className="absolute bottom-0 left-0 p-12 z-20 text-white">
-          <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">Join the Movement.</h2>
-          <p className="text-zinc-300 max-w-md font-medium">
-            Get exclusive access to limited drops, early sale access, and member-only rewards.
-          </p>
+    <div className="min-h-screen flex">
+      {/* Left - Brand Image */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <Image src="/Hero/About@.avif" alt="Fashion" fill className="object-cover" priority />
+        <div className="absolute inset-0 bg-gradient-to-r from-neutral-900/80 to-neutral-900/40" />
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white h-full">
+          <Link href="/" className="text-2xl font-extralight tracking-[0.3em] uppercase">LuciDrip</Link>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3 }} className="max-w-md">
+            <p className="text-[10px] tracking-[0.3em] uppercase text-white/60 mb-4">Join Us</p>
+            <h2 className="text-4xl font-extralight leading-relaxed mb-4">
+              Begin your <span className="italic">fashion</span> journey.
+            </h2>
+            <p className="text-sm font-light text-white/70 leading-relaxed">
+              Create an account to unlock exclusive access to new collections and members-only benefits.
+            </p>
+          </motion.div>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-white/40">© {new Date().getFullYear()} LuciDrip.</p>
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: SIGNUP FORM --- */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16 lg:p-24 bg-white">
-        <div className="w-full max-w-md space-y-8">
-          
-          <div className="text-center lg:text-left">
-            <h1 className="text-3xl font-black text-black uppercase tracking-tight mb-2">Create Account</h1>
-            <p className="text-gray-500 font-medium">Enter your details below to get started.</p>
+      {/* Right - Signup Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16 bg-white overflow-y-auto">
+        <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
+          <div className="mb-8">
+            <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-500 mb-3">Create Account</p>
+            <h1 className="text-3xl font-extralight text-neutral-900">Sign <span className="italic">Up</span></h1>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-8">
-            
-            {/* NAME FIELD */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-wider ml-1">Full Name</label>
-              <input 
-                {...register("name", { required: "Name is required" })}
-                type="text"
-                placeholder="Sumit Kumar"
-                className={`w-full bg-white border rounded-xl px-4 py-4 font-medium focus:outline-none focus:ring-1 transition placeholder-gray-300 ${
-                  errors.name 
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500" 
-                    : "border-gray-200 focus:border-black focus:ring-black"
-                }`}
-              />
-              {errors.name && (
-                <p className="text-xs text-red-500 font-bold flex items-center gap-1 mt-1 ml-1">
-                  <HiExclamationCircle /> {errors.name.message}
-                </p>
-              )}
+          {/* Error Feedback */}
+          {(serverError || Object.keys(errors).length > 0) && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 p-4 border border-red-200 bg-red-50 flex items-start gap-3">
+              <HiExclamationCircle className="text-red-500 w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-600 font-light">
+                {serverError || "Please check the form for errors."}
+              </div>
+            </motion.div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Full Name */}
+            <div className="space-y-2">
+              <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">Full Name</label>
+              <div className="relative">
+                <HiOutlineUser className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input {...register("name")} placeholder="Jane Smith" className={`w-full border ${errors.name ? 'border-red-400' : 'border-neutral-200'} pl-12 pr-4 py-4 text-sm font-light focus:outline-none focus:border-neutral-900 transition`} />
+              </div>
             </div>
 
-            {/* EMAIL FIELD */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-wider ml-1">Email Address</label>
-              <input 
-                {...register("email", { 
-                  required: "Email is required",
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Invalid email address"
-                  }
-                })}
-                type="email"
-                placeholder="name@example.com"
-                className={`w-full bg-white border rounded-xl px-4 py-4 font-medium focus:outline-none focus:ring-1 transition placeholder-gray-300 ${
-                  errors.email 
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500" 
-                    : "border-gray-200 focus:border-black focus:ring-black"
-                }`}
-              />
-              {errors.email && (
-                <p className="text-xs text-red-500 font-bold flex items-center gap-1 mt-1 ml-1">
-                  <HiExclamationCircle /> {errors.email.message}
-                </p>
-              )}
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">Email Address</label>
+              <div className="relative">
+                <HiOutlineEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input {...register("email")} type="email" placeholder="your@email.com" className={`w-full border ${errors.email ? 'border-red-400' : 'border-neutral-200'} pl-12 pr-4 py-4 text-sm font-light focus:outline-none focus:border-neutral-900 transition`} />
+              </div>
             </div>
 
-            {/* PASSWORD FIELD */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-wider ml-1">Password</label>
-              <input 
-                {...register("password", { 
-                  required: "Password is required",
-                  minLength: {
-                    value: 8,
-                    message: "Password must be at least 8 characters"
-                  }
-                })}
-                type="password"
-                placeholder="••••••••"
-                className={`w-full bg-white border rounded-xl px-4 py-4 font-medium focus:outline-none focus:ring-1 transition placeholder-gray-300 text-lg tracking-widest ${
-                  errors.password 
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500" 
-                    : "border-gray-200 focus:border-black focus:ring-black"
-                }`}
-              />
-               {errors.password ? (
-                 <p className="text-xs text-red-500 font-bold flex items-center gap-1 mt-1 ml-1">
-                   <HiExclamationCircle /> {errors.password.message}
-                 </p>
-               ) : (
-                 <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-2 ml-1">Must be at least 8 characters</p>
-               )}
+            {/* Phone */}
+            <div className="space-y-2">
+              <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">Phone Number</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">#</span>
+                <input {...register("phone")} type="tel" placeholder="+91 98765 43210" className={`w-full border ${errors.phone ? 'border-red-400' : 'border-neutral-200'} pl-12 pr-4 py-4 text-sm font-light focus:outline-none focus:border-neutral-900 transition`} />
+              </div>
             </div>
 
-           {/* CONFIRM PASSWORD FIELD */}
-<div className="space-y-1">
-  <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-wider ml-1">
-    Confirm Password
-  </label>
+            {/* Password */}
+            <div className="space-y-2">
+              <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">Password</label>
+              <div className="relative">
+                <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input {...register("password")} type={showPassword ? "text" : "password"} placeholder="••••••••" className={`w-full border ${errors.password ? 'border-red-400' : 'border-neutral-200'} pl-12 pr-12 py-4 text-sm font-light focus:outline-none focus:border-neutral-900 transition`} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400">
+                  {showPassword ? <HiEyeSlash className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+                </button>
+              </div>
+              
+              {/* Dynamic Requirement List */}
+              <div className="pt-2 space-y-1">
+                {Object.entries({
+                  length: 'At least 8 characters',
+                  uppercase: 'One uppercase letter',
+                  lowercase: 'One lowercase letter',
+                  number: 'One number'
+                }).map(([key, label]) => (
+                  <div key={key} className={`flex items-center gap-2 text-[10px] uppercase tracking-wider ${passwordChecks[key as keyof typeof passwordChecks] ? 'text-emerald-600' : 'text-neutral-400'}`}>
+                    <div className={`w-3 h-3 border flex items-center justify-center ${passwordChecks[key as keyof typeof passwordChecks] ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-300'}`}>
+                      {passwordChecks[key as keyof typeof passwordChecks] && <HiCheck className="w-2 h-2 text-white" />}
+                    </div>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-  <input
-    {...register("confirmPassword", {
-      required: "Please confirm your password",
-      validate: (value) =>
-        value === watch("password") || "Passwords do not match",
-    })}
-    type="password"
-    placeholder="••••••••"
-    className={`w-full bg-white border rounded-xl px-4 py-4 font-medium focus:outline-none focus:ring-1 transition placeholder-gray-300 text-lg tracking-widest ${
-      errors.confirmPassword
-        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-        : "border-gray-200 focus:border-black focus:ring-black"
-    }`}
-  />
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">Confirm Password</label>
+              <div className="relative">
+                <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input {...register("confirmPassword")} type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" className={`w-full border ${errors.confirmPassword ? 'border-red-400' : 'border-neutral-200'} pl-12 pr-12 py-4 text-sm font-light focus:outline-none transition focus:border-neutral-900`} />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400">
+                  {showConfirmPassword ? <HiEyeSlash className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
 
-  {errors.confirmPassword ? (
-    <p className="text-xs text-red-500 font-bold flex items-center gap-1 mt-1 ml-1">
-      <HiExclamationCircle /> {errors.confirmPassword.message}
-    </p>
-  ) : (
-    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-2 ml-1">
-      Must match the password
-    </p>
-  )}
-</div>
-
-
-            <button 
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-zinc-800 transition shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-8"
-            >
-              {isSubmitting ? (
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                <>
-                  Create Account <HiOutlineArrowRight />
-                </>
-              )}
+            <button type="submit" disabled={isLoading} className="w-full py-4 bg-neutral-900 text-white text-xs tracking-[0.1em] uppercase hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:bg-neutral-300">
+              {isLoading ? <div className="w-4 h-4 border border-white border-t-transparent animate-spin" /> : <>Create Account <HiArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
 
-          {/* Social Divider */}
-          <div className="relative flex items-center py-4">
-            <div className="flex-grow border-t border-gray-200"></div>
-            <span className="flex-shrink mx-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Or continue with</span>
-            <div className="flex-grow border-t border-gray-200"></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center gap-3 bg-white border border-gray-200 py-3 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition font-bold text-sm text-gray-700">
-              <FcGoogle className="text-xl" /> Google
-            </button>
-            <button className="flex items-center justify-center gap-3 bg-white border border-gray-200 py-3 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition font-bold text-sm text-gray-700">
-              <FaApple className="text-xl" /> Apple
-            </button>
-          </div>
-
-          <p className="text-center text-sm font-medium text-gray-500 mt-8">
+          {/* Footer Links */}
+          <p className="mt-8 text-center text-sm font-light text-neutral-500">
             Already have an account?{" "}
-            <Link href="/login" className="text-black font-bold underline underline-offset-4 hover:text-zinc-700">
-              Log in
-            </Link>
+            <Link href="/login" className="text-neutral-900 underline underline-offset-4">Sign in</Link>
           </p>
-
-        </div>
+        </motion.div>
       </div>
     </div>
   );

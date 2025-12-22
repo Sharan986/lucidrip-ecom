@@ -1,72 +1,107 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useCheckoutStepStore } from "@/store/checkoutStepStore";
 import { HiCheck } from "react-icons/hi2";
+
+const steps = [
+  { number: 1, label: "Review", sublabel: "Your Bag" },
+  { number: 2, label: "Shipping", sublabel: "Delivery Details" },
+  { number: 3, label: "Payment", sublabel: "Complete Order" },
+];
 
 export default function CheckoutSteps() {
   const { step } = useCheckoutStepStore();
 
-  const steps = [
-    { id: 1, name: "Cart" },
-    { id: 2, name: "Shipping" },
-    { id: 3, name: "Payment" },
-  ];
-
-  
-  const progressWidth = ((step - 1) / (steps.length - 1)) * 100;
-
   return (
-    <div className="w-full max-w-3xl mx-auto mb-10 px-4">
-      <div className="relative flex justify-between items-center">
-        
-        
-        {/* Gray (Empty) Line */}
-        <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-100 -translate-y-1/2 rounded-full -z-10" />
-        
-        {/* Black (Filled) Line with transition */}
-        <div 
-          className="absolute top-1/2 left-0 h-1 bg-black -translate-y-1/2 rounded-full -z-10 transition-all duration-500 ease-out"
-          style={{ width: `${progressWidth}%` }}
-        />
+    <div className="w-full border-b border-neutral-200 bg-white">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Mobile View */}
+        <div className="md:hidden">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] tracking-[0.2em] uppercase text-neutral-500">
+              Step {step} of 3
+            </span>
+            <span className="text-sm font-light">
+              {steps[step - 1].label}
+            </span>
+          </div>
+          <div className="h-[2px] bg-neutral-100 relative">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${((step) / 3) * 100}%` }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute inset-y-0 left-0 bg-neutral-900"
+            />
+          </div>
+        </div>
 
-        {/* --- 2. Steps --- */}
-        {steps.map((s) => {
-          const isCompleted = step > s.id;
-          const isActive = step === s.id;
-          const isPending = step < s.id;
+        {/* Desktop View */}
+        <div className="hidden md:flex items-center justify-between">
+          {steps.map((s, index) => (
+            <div key={s.number} className="flex items-center flex-1">
+              {/* Step Indicator */}
+              <div className="flex items-center">
+                <motion.div
+                  initial={false}
+                  animate={{
+                    backgroundColor: step > s.number ? "#171717" : step === s.number ? "#171717" : "#ffffff",
+                    borderColor: step >= s.number ? "#171717" : "#d4d4d4",
+                  }}
+                  className="relative w-10 h-10 border flex items-center justify-center"
+                >
+                  {step > s.number ? (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    >
+                      <HiCheck className="w-5 h-5 text-white" />
+                    </motion.div>
+                  ) : (
+                    <span
+                      className={`text-sm font-light ${
+                        step === s.number ? "text-white" : "text-neutral-400"
+                      }`}
+                    >
+                      {s.number}
+                    </span>
+                  )}
+                </motion.div>
 
-          return (
-            <div key={s.id} className="flex flex-col items-center gap-2 group">
-              
-              {/* Circle Indicator */}
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300 z-10 ${
-                  isCompleted
-                    ? "bg-black border-black text-white" // Completed
-                    : isActive
-                    ? "bg-black border-black text-white scale-110 shadow-lg" // Active
-                    : "bg-white border-gray-200 text-gray-400" // Pending
-                }`}
-              >
-                {isCompleted ? (
-                  <HiCheck className="text-lg font-bold" />
-                ) : (
-                  <span className="text-sm font-semibold">{s.id}</span>
-                )}
+                {/* Step Label */}
+                <div className="ml-4">
+                  <p
+                    className={`text-[10px] tracking-[0.2em] uppercase ${
+                      step >= s.number ? "text-neutral-900" : "text-neutral-400"
+                    }`}
+                  >
+                    {s.sublabel}
+                  </p>
+                  <p
+                    className={`text-sm font-light mt-0.5 ${
+                      step >= s.number ? "text-neutral-900" : "text-neutral-400"
+                    }`}
+                  >
+                    {s.label}
+                  </p>
+                </div>
               </div>
 
-              {/* Label */}
-              <span
-                className={`text-xs uppercase tracking-wider font-semibold transition-colors duration-300 ${
-                  isActive || isCompleted ? "text-gray-900" : "text-gray-400"
-                }`}
-              >
-                {s.name}
-              </span>
+              {/* Connector Line */}
+              {index < steps.length - 1 && (
+                <div className="flex-1 h-[1px] bg-neutral-200 mx-6 relative">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: step > s.number ? "100%" : "0%" }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-y-0 left-0 bg-neutral-900"
+                  />
+                </div>
+              )}
             </div>
-          );
-        })}
-        
+          ))}
+        </div>
       </div>
     </div>
   );

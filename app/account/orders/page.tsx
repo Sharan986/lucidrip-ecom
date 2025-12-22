@@ -1,234 +1,238 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  HiOutlineChevronRight, 
   HiOutlineShoppingBag, 
   HiOutlineTruck,
-  HiOutlineDocumentText,
-  HiOutlineArrowPath,
-  HiMagnifyingGlass
+  HiChevronRight,
+  HiXMark
 } from "react-icons/hi2";
+import { useOrderStore, Order } from "@/store/useOrderStore";
 
-// --- TYPES ---
-interface OrderItem {
-  name: string;
-  slug: string;
-  img: string;
-  quantity: number;
-}
-
-interface Order {
-  id: string;
-  date: string;
-  total: number;
-  status: "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Returned";
-  items: OrderItem[];
-  trackingId?: string;
-}
-
-// --- DUMMY DATA (Expanded for realism) ---
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "ORD-8821-XJ",
-    date: "Dec 14, 2024",
-    total: 4398,
-    status: "Processing",
-    trackingId: "FEDEX-992123",
-    items: [
-      { name: "Oversized Street Hoodie", slug: "oversized-hoodie", img: "/Hero/Product1.avif", quantity: 1 },
-      { name: "Classic Beige Knit", slug: "beige-knit", img: "/Hero/Product2.avif", quantity: 1 },
-    ]
-  },
-  {
-    id: "ORD-8819-AB",
-    date: "Nov 20, 2024",
-    total: 2100,
-    status: "Delivered",
-    trackingId: "DHL-112933",
-    items: [
-      { name: "Urban Cargo Sweatshirt", slug: "urban-cargo", img: "/Hero/Product3.avif", quantity: 1 }
-    ]
-  },
-  {
-    id: "ORD-8750-CK",
-    date: "Oct 05, 2024",
-    total: 1599,
-    status: "Delivered",
-    items: [
-      { name: "Signature Fleece Pullover", slug: "fleece-pullover", img: "/Hero/Product4.avif", quantity: 1 }
-    ]
-  },
-  {
-    id: "ORD-8600-ZZ",
-    date: "Aug 15, 2024",
-    total: 2800,
-    status: "Returned",
-    items: [
-      { name: "Vintage Cable Knit", slug: "cable-knit", img: "/Hero/Product1.avif", quantity: 1 }
-    ]
-  },
-];
-
-// --- HELPER: Status Styles ---
 const getStatusStyles = (status: string) => {
   switch (status) {
-    case "Delivered": return "bg-green-100 text-green-700 border-green-200";
-    case "Shipped": return "bg-blue-100 text-blue-700 border-blue-200";
-    case "Processing": return "bg-yellow-50 text-yellow-700 border-yellow-200";
-    case "Cancelled": return "bg-red-50 text-red-600 border-red-100";
-    case "Returned": return "bg-gray-100 text-gray-600 border-gray-200";
-    default: return "bg-gray-50 text-gray-600";
+    case "Delivered": return { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" };
+    case "Shipped": return { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" };
+    case "Processing": return { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" };
+    case "Cancelled": return { bg: "bg-red-50", text: "text-red-600", border: "border-red-200" };
+    case "Returned": return { bg: "bg-neutral-100", text: "text-neutral-600", border: "border-neutral-200" };
+    default: return { bg: "bg-neutral-50", text: "text-neutral-600", border: "border-neutral-200" };
   }
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<"ALL" | "ACTIVE" | "HISTORY">("ALL");
+  const { orders, isLoading, fetchOrders, cancelOrder } = useOrderStore();
 
-  // Filter Logic
-  const filteredOrders = MOCK_ORDERS.filter(order => {
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const filteredOrders = orders.filter((order: Order) => {
     if (activeTab === "ALL") return true;
     if (activeTab === "ACTIVE") return ["Processing", "Shipped"].includes(order.status);
     if (activeTab === "HISTORY") return ["Delivered", "Cancelled", "Returned"].includes(order.status);
     return true;
   });
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (confirm("Are you sure you want to cancel this order?")) {
+      await cancelOrder(orderId);
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      
-      {/* --- HEADER & TABS --- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Order History</h2>
-        
-        {/* Tabs */}
-        <div className="flex p-1 bg-gray-100 rounded-lg">
-          {(["ALL", "ACTIVE", "HISTORY"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
-                activeTab === tab 
-                  ? "bg-white text-black shadow-sm" 
-                  : "text-gray-500 hover:text-gray-900"
-              }`}
-            >
-              {tab.charAt(0) + tab.slice(1).toLowerCase()}
-            </button>
-          ))}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white border border-neutral-200 p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 mb-1">
+              Purchases
+            </p>
+            <h2 className="text-2xl font-extralight tracking-wide">
+              Order <span className="italic">History</span>
+            </h2>
+          </div>
+          
+          {/* Tabs */}
+          <div className="flex border border-neutral-200">
+            {(["ALL", "ACTIVE", "HISTORY"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-5 py-2.5 text-xs tracking-[0.1em] uppercase transition-all ${
+                  activeTab === tab 
+                    ? "bg-neutral-900 text-white" 
+                    : "text-neutral-500 hover:bg-neutral-50"
+                }`}
+              >
+                {tab === "ALL" ? "All" : tab === "ACTIVE" ? "Active" : "Past"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* --- ORDERS LIST --- */}
-      <div className="space-y-6">
-        {filteredOrders.length === 0 ? (
-           // --- EMPTY STATE ---
-           <div className="text-center py-24 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300 shadow-sm">
-                <HiOutlineShoppingBag className="text-4xl" />
-             </div>
-             <h3 className="font-bold text-gray-900 text-lg mb-2">No orders found</h3>
-             <p className="text-sm text-gray-500 mb-8 max-w-xs mx-auto">Looks like you haven&apos;t placed any orders in this category yet.</p>
-             <Link href="/products" className="bg-black text-white px-8 py-3 rounded-full text-sm font-bold hover:bg-zinc-800 transition">
-               Start Shopping
-             </Link>
-           </div>
-        ) : (
-          filteredOrders.map((order) => (
-            <div 
-              key={order.id} 
-              className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 transition-colors shadow-sm"
-            >
-              
-              {/* 1. ORDER HEADER (Meta Data) */}
-              <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex flex-col md:flex-row justify-between gap-4">
-                <div className="flex flex-wrap gap-x-8 gap-y-2">
-                   <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Order ID</p>
-                      <p className="text-sm font-mono font-medium text-gray-900">{order.id}</p>
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Date Placed</p>
-                      <p className="text-sm font-medium text-gray-900">{order.date}</p>
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Amount</p>
-                      <p className="text-sm font-bold text-gray-900">₹{order.total.toLocaleString()}</p>
-                   </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                   {order.trackingId && (
-                      <div className="hidden md:block text-right">
-                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tracking #</p>
-                         <p className="text-sm font-mono text-blue-600 hover:underline cursor-pointer">{order.trackingId}</p>
-                      </div>
-                   )}
-                   <Link 
-                      href={`/account/orders/${order.id}`} // Assuming you'll make a detail page
-                      className="text-xs font-bold border border-gray-300 bg-white px-4 py-2 rounded-lg hover:bg-gray-50 transition"
-                   >
-                      View Details
-                   </Link>
-                </div>
-              </div>
-
-              {/* 2. ORDER CONTENT */}
-              <div className="p-6 flex flex-col md:flex-row gap-6 items-center">
-                 
-                 {/* Status Badge */}
-                 <div className="w-full md:w-40 flex-shrink-0">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border ${getStatusStyles(order.status)}`}>
-                       {order.status === 'Processing' && <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"/>}
-                       {order.status === 'Delivered' && <span className="w-2 h-2 bg-green-500 rounded-full"/>}
-                       {order.status}
-                    </span>
-                    {order.status === 'Processing' && (
-                       <p className="text-xs text-gray-400 mt-2">Est. Delivery: Tomorrow</p>
-                    )}
-                 </div>
-
-                 {/* Products List */}
-                 <div className="flex-1 w-full space-y-4">
-                    {order.items.map((item, idx) => (
-                       <div key={idx} className="flex gap-4 items-center">
-                          <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
-                             <Image src={item.img} alt={item.name} fill className="object-cover" />
-                          </div>
-                          <div>
-                             <Link href={`/product/${item.slug}`} className="font-bold text-sm text-gray-900 hover:underline line-clamp-1">
-                                {item.name}
-                             </Link>
-                             <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-
-                 {/* Action Buttons */}
-                 <div className="w-full md:w-auto flex flex-row md:flex-col gap-3 shrink-0 pt-4 md:pt-0 border-t md:border-0 border-gray-100">
-                    {order.status === 'Delivered' ? (
-                       <>
-                         <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-zinc-800 transition">
-                            <HiOutlineArrowPath className="text-base" /> Buy Again
-                         </button>
-                         <button className="flex-1 flex items-center justify-center gap-2 border border-gray-200 text-gray-700 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-gray-50 transition">
-                            <HiOutlineDocumentText className="text-base" /> Invoice
-                         </button>
-                       </>
-                    ) : order.status === 'Processing' ? (
-                       <button className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-blue-700 transition">
-                          <HiOutlineTruck className="text-base" /> Track Package
-                       </button>
-                    ) : null}
-                 </div>
-
-              </div>
+      {/* Orders List */}
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="bg-white border border-neutral-200 p-16 text-center"
+          >
+            <div className="w-8 h-8 border border-neutral-900 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-sm text-neutral-500">Loading orders...</p>
+          </motion.div>
+        ) : filteredOrders.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="bg-white border border-neutral-200 p-16 text-center"
+          >
+            <div className="w-20 h-20 border border-neutral-200 flex items-center justify-center mx-auto mb-6">
+              <HiOutlineShoppingBag className="w-10 h-10 text-neutral-300" />
             </div>
-          ))
+            <h3 className="text-lg font-extralight text-neutral-900 mb-2">
+              No orders found
+            </h3>
+            <p className="text-sm text-neutral-500 mb-8 max-w-xs mx-auto">
+              {activeTab === "ALL" 
+                ? "You haven't placed any orders yet" 
+                : `No ${activeTab.toLowerCase()} orders`}
+            </p>
+            <Link 
+              href="/products"
+              className="inline-block bg-neutral-900 text-white px-8 py-3 text-xs tracking-[0.1em] uppercase hover:bg-neutral-800 transition"
+            >
+              Start Shopping
+            </Link>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-4"
+          >
+            {filteredOrders.map((order, index) => {
+              const statusStyle = getStatusStyles(order.status);
+              
+              return (
+                <motion.div
+                  key={order._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white border border-neutral-200 hover:border-neutral-300 transition-colors"
+                >
+                  {/* Order Header */}
+                  <div className="p-6 border-b border-neutral-100">
+                    <div className="flex flex-wrap items-center gap-6 text-sm">
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 mb-0.5">
+                          Order
+                        </p>
+                        <p className="font-mono font-medium">{order.orderNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 mb-0.5">
+                          Date
+                        </p>
+                        <p className="font-light">{formatDate(order.createdAt)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 mb-0.5">
+                          Total
+                        </p>
+                        <p className="font-medium">₹{order.totalAmount.toLocaleString()}</p>
+                      </div>
+                      <div className="ml-auto flex items-center gap-4">
+                        <span className={`px-3 py-1.5 text-[10px] tracking-[0.1em] uppercase border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                          {order.status}
+                        </span>
+                        <Link 
+                          href={`/account/orders/${order._id}`}
+                          className="flex items-center gap-1 text-xs font-light text-neutral-600 hover:text-neutral-900 transition group"
+                        >
+                          Details
+                          <HiChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="p-6">
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                      {order.items.slice(0, 4).map((item, i) => (
+                        <div key={i} className="flex-shrink-0 flex gap-4">
+                          <div className="w-16 h-20 bg-neutral-100 relative">
+                            <Image 
+                              src={item.image || "/Hero/Product1.avif"} 
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-light text-neutral-900 mb-1 truncate max-w-[150px]">
+                              {item.name}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                              {item.size} · Qty: {item.quantity}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {order.items.length > 4 && (
+                        <div className="flex-shrink-0 w-16 h-20 bg-neutral-100 flex items-center justify-center">
+                          <span className="text-sm text-neutral-500">
+                            +{order.items.length - 4}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-neutral-100">
+                      {order.trackingId && (
+                        <div className="flex items-center gap-2 text-sm text-neutral-500">
+                          <HiOutlineTruck className="w-4 h-4" />
+                          <span className="font-mono text-xs">{order.trackingId}</span>
+                        </div>
+                      )}
+                      {order.status === "Processing" && (
+                        <button
+                          onClick={() => handleCancelOrder(order._id)}
+                          className="ml-auto flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition"
+                        >
+                          <HiXMark className="w-4 h-4" />
+                          Cancel Order
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 }

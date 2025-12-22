@@ -1,333 +1,231 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { 
   HiOutlineMagnifyingGlass, 
-  HiOutlineArrowDownTray, 
   HiOutlineEnvelope,
-  HiChevronDown,
-  HiChevronUp,
-  HiOutlineShoppingBag,
-  HiChevronLeft,
-  HiChevronRight,
-  HiEllipsisHorizontal,
-  HiOutlineCheck,
-  HiOutlineTrash,
-  HiOutlineNoSymbol,
-  HiOutlinePencilSquare
+  HiOutlineEllipsisVertical
 } from "react-icons/hi2";
+import { useAdminAuthStore } from "@/store/useAdminAuthStore";
+import { useAdminDataStore, Customer } from "@/store/useAdminDataStore";
 
-// --- TYPES ---
-interface OrderHistory {
-  id: string;
-  date: string;
-  items: string;
-  amount: number;
-  status: "DELIVERED" | "PENDING" | "SHIPPED" | "CANCELLED";
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  location: string;
-  totalOrders: number;
-  totalSpent: number;
-  lastActive: string;
-  status: "ACTIVE" | "BLOCKED" | "VIP"; 
-  history: OrderHistory[];
-}
-
-// --- MOCK DATA ---
-const CUSTOMERS: Customer[] = [
-  { 
-    id: "CUST-001", name: "Sumit Mehta", email: "Sumit.m@gmail.com", location: "Mumbai, IN", totalOrders: 12, totalSpent: 45200, lastActive: "2m ago", status: "VIP",
-    history: [
-      { id: "ORD-7829", date: "Oct 24", items: "Heavyweight Tee (x3)", amount: 4299, status: "PENDING" },
-      { id: "ORD-7510", date: "Sep 12", items: "Cargo Pants (x1)", amount: 3500, status: "DELIVERED" },
-    ]
-  },
-  { 
-    id: "CUST-002", name: "Sarah Jenkins", email: "sarah.j@design.co", location: "London, UK", totalOrders: 3, totalSpent: 8500, lastActive: "1d ago", status: "ACTIVE",
-    history: [
-      { id: "ORD-7100", date: "Aug 05", items: "Graphic Hoodie (x1)", amount: 4500, status: "DELIVERED" },
-    ]
-  },
-  { 
-    id: "CUST-003", name: "Rahul Verma", email: "rahul.v@tech.in", location: "Bangalore, IN", totalOrders: 1, totalSpent: 2400, lastActive: "5d ago", status: "ACTIVE",
-    history: [
-      { id: "ORD-6900", date: "Feb 20", items: "Cap (x1), Socks (x2)", amount: 2400, status: "DELIVERED" }
-    ]
-  },
-  { 
-    id: "CUST-004", name: "David Chen", email: "david.c@proton.me", location: "New York, US", totalOrders: 0, totalSpent: 0, lastActive: "1mo ago", status: "BLOCKED",
-    history: []
-  },
-  { 
-    id: "CUST-005", name: "Priya Singh", email: "priya.s@fashion.in", location: "Delhi, IN", totalOrders: 8, totalSpent: 28900, lastActive: "3h ago", status: "VIP",
-    history: [
-      { id: "ORD-7828", date: "Oct 23", items: "Puffer Jacket (x1)", amount: 8900, status: "SHIPPED" },
-    ]
-  },
-];
-
-export default function CustomersPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("ALL");
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  // --- LOGIC ---
-  const filteredCustomers = useMemo(() => {
-    return CUSTOMERS.filter(c => {
-      const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filter === "ALL" || c.status === filter;
-      return matchesSearch && matchesFilter;
-    });
-  }, [searchQuery, filter]);
-
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
-  const paginatedData = filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const toggleRow = (id: string) => setExpandedRow(expandedRow === id ? null : id);
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === paginatedData.length) setSelectedIds([]);
-    else setSelectedIds(paginatedData.map(c => c.id));
-  };
-
-  const toggleSelectOne = (id: string) => {
-    if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter(i => i !== id));
-    else setSelectedIds([...selectedIds, id]);
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    Active: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Inactive: "bg-neutral-100 text-neutral-500 border-neutral-200",
+    New: "bg-blue-50 text-blue-700 border-blue-200",
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20 font-sans text-zinc-900">
+    <span className={`inline-flex items-center px-2 py-0.5 text-[10px] tracking-[0.1em] uppercase border ${styles[status] || styles.Inactive}`}>
+      {status}
+    </span>
+  );
+};
+
+export default function CustomersPage() {
+  const { adminToken } = useAdminAuthStore();
+  const { customers, customerStats, isLoading, error, fetchCustomers } = useAdminDataStore();
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sortBy, setSortBy] = useState<"spent" | "orders" | "recent">("recent");
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  useEffect(() => {
+    if (adminToken && !dataLoaded) {
+      fetchCustomers(adminToken);
+      setDataLoaded(true);
+    }
+  }, [adminToken, fetchCustomers, dataLoaded]);
+
+  const filteredCustomers = useMemo(() => {
+    let filtered = customers.filter(customer => {
+      const matchesSearch = customer.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            customer.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "All" || customer.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    // Sort
+    if (sortBy === "spent") {
+      filtered = [...filtered].sort((a, b) => b.spent - a.spent);
+    } else if (sortBy === "orders") {
+      filtered = [...filtered].sort((a, b) => b.orders - a.orders);
+    }
+
+    return filtered;
+  }, [customers, searchQuery, statusFilter, sortBy]);
+
+  const stats = customerStats;
+
+  return (
+    <div className="space-y-6">
       
-      {/* --- PAGE HEADER --- */}
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
-            <p className="text-sm text-zinc-500 mt-1">View and manage your user base.</p>
+      {/* --- HEADER --- */}
+      <div>
+        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 mb-2">
+          People
+        </p>
+        <h1 className="text-2xl font-extralight text-neutral-900">
+          <span className="italic">Customers</span>
+        </h1>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* --- STATS --- */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      >
+        {[
+          { label: "Total Customers", value: isLoading ? "..." : stats.total },
+          { label: "Active", value: isLoading ? "..." : stats.active },
+          { label: "Total Revenue", value: isLoading ? "..." : `₹${(stats.totalSpent / 1000).toFixed(1)}K` },
+          { label: "Avg. Order Value", value: isLoading ? "..." : `₹${stats.avgOrderValue.toLocaleString()}` },
+        ].map((stat, i) => (
+          <div key={i} className="border border-neutral-200 bg-white p-4">
+            <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-400 mb-2">
+              {stat.label}
+            </p>
+            <p className="text-xl font-light text-neutral-900">{stat.value}</p>
           </div>
-          <div className="flex gap-3">
-             <button className="px-4 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-zinc-50 transition shadow-sm flex items-center gap-2">
-               <HiOutlineArrowDownTray className="text-lg" /> Export CSV
-             </button>
-             <button className="px-5 py-2 bg-black text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition shadow-lg flex items-center gap-2">
-               <HiOutlineEnvelope className="text-lg" /> Email All
-             </button>
-          </div>
+        ))}
+      </motion.div>
+
+      {/* --- FILTERS --- */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Status Tabs */}
+        <div className="flex border border-neutral-200">
+          {["All", "Active", "Inactive", "New"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              className={`px-4 py-2 text-[10px] tracking-[0.1em] uppercase transition-all ${
+                statusFilter === tab 
+                  ? "bg-neutral-900 text-white" 
+                  : "text-neutral-500 hover:text-neutral-900"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        {/* --- MAIN CARD --- */}
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
-          
-          {/* Toolbar */}
-          <div className="px-6 py-4 border-b border-zinc-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white">
-             {/* Tabs */}
-             <div className="flex bg-zinc-100 p-1 rounded-lg">
-                {["ALL", "VIP", "ACTIVE", "BLOCKED"].map((f) => (
-                   <button
-                     key={f}
-                     onClick={() => { setFilter(f); setCurrentPage(1); }}
-                     className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${
-                       filter === f ? "bg-white text-black shadow-sm" : "text-zinc-500 hover:text-black"
-                     }`}
-                   >
-                     {f}
-                   </button>
-                ))}
-             </div>
+        <div className="flex gap-3 w-full sm:w-auto">
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "spent" | "orders" | "recent")}
+            className="px-4 py-2.5 border border-neutral-200 text-xs font-light focus:outline-none focus:border-neutral-900 transition bg-white"
+          >
+            <option value="recent">Most Recent</option>
+            <option value="spent">Highest Spent</option>
+            <option value="orders">Most Orders</option>
+          </select>
 
-             {/* Search */}
-             <div className="relative w-full sm:w-64">
-                <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-                <input 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search customers..." 
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-medium focus:outline-none focus:border-black transition placeholder:text-zinc-400"
-                />
-             </div>
+          {/* Search */}
+          <div className="relative flex-1 sm:w-56">
+            <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4" />
+            <input 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search customers..." 
+              className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 text-xs font-light focus:outline-none focus:border-neutral-900 transition"
+            />
           </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-             <table className="w-full text-left border-collapse">
-                <thead className="bg-zinc-50 border-b border-zinc-100">
-                   <tr>
-                      <th className="px-6 py-4 w-10">
-                         <input 
-                           type="checkbox" 
-                           className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-0 cursor-pointer"
-                           checked={selectedIds.length === paginatedData.length && paginatedData.length > 0}
-                           onChange={toggleSelectAll}
-                         />
-                      </th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Customer</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Orders</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Spent</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Last Active</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                   </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                   {paginatedData.map((c) => (
-                      <React.Fragment key={c.id}>
-                         {/* ROW */}
-                         <tr 
-                           className={`group transition-colors ${expandedRow === c.id ? "bg-zinc-50" : "hover:bg-zinc-50"}`}
-                         >
-                            <td className="px-6 py-4">
-                               <input 
-                                 type="checkbox" 
-                                 className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-0 cursor-pointer"
-                                 checked={selectedIds.includes(c.id)}
-                                 onChange={() => toggleSelectOne(c.id)}
-                               />
-                            </td>
-                            <td className="px-6 py-4">
-                               <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-xs font-bold text-zinc-600 border border-zinc-200">
-                                     {c.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                     <Link href={`/admin/customers/${c.email}`} className="text-sm font-bold text-zinc-900 hover:underline">
-                                        {c.name}
-                                     </Link>
-                                     <p className="text-xs text-zinc-500">{c.email}</p>
-                                  </div>
-                               </div>
-                            </td>
-                            <td className="px-6 py-4">
-                               <span className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                                  c.status === "VIP" ? "bg-black text-white border-black" :
-                                  c.status === "ACTIVE" ? "bg-green-50 text-green-700 border-green-200" :
-                                  "bg-red-50 text-red-700 border-red-200 line-through"
-                               }`}>
-                                  {c.status}
-                               </span>
-                            </td>
-                            <td className="px-6 py-4 text-right text-sm font-medium text-zinc-700">
-                               {c.totalOrders}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                               <span className="font-mono text-sm font-medium">₹{c.totalSpent.toLocaleString()}</span>
-                            </td>
-                            <td className="px-6 py-4 text-right text-xs text-zinc-500 font-mono">
-                               {c.lastActive}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                               <div className="flex justify-end items-center gap-2">
-                                  <button onClick={() => toggleRow(c.id)} className="p-1.5 text-zinc-400 hover:text-black hover:bg-white rounded transition border border-transparent hover:border-zinc-200">
-                                     {expandedRow === c.id ? <HiChevronUp /> : <HiChevronDown />}
-                                  </button>
-                                  
-                                  {/* Quick Actions Dropdown Trigger (Visual Only) */}
-                                  <div className="relative group/menu">
-                                     <button className="p-1.5 text-zinc-400 hover:text-black hover:bg-white rounded transition border border-transparent hover:border-zinc-200">
-                                        <HiEllipsisHorizontal className="text-lg" />
-                                     </button>
-                                     {/* Hover Menu */}
-                                     <div className="absolute right-0 top-8 w-32 bg-white border border-zinc-200 shadow-xl rounded-lg p-1 z-10 hidden group-hover/menu:block">
-                                        <button className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 rounded text-left">
-                                           <HiOutlinePencilSquare /> Edit
-                                        </button>
-                                        <button className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded text-left">
-                                           <HiOutlineNoSymbol /> Block
-                                        </button>
-                                     </div>
-                                  </div>
-                               </div>
-                            </td>
-                         </tr>
-
-                         {/* EXPANDED DETAILS */}
-                         {expandedRow === c.id && (
-                            <tr className="bg-zinc-50 border-b border-zinc-200">
-                               <td colSpan={7} className="px-6 py-4">
-                                  <div className="pl-14">
-                                     <div className="flex items-center gap-2 mb-3">
-                                        <HiOutlineShoppingBag className="text-zinc-400" />
-                                        <span className="text-xs font-bold uppercase text-zinc-500 tracking-wider">Recent Activity</span>
-                                     </div>
-                                     {c.history.length > 0 ? (
-                                        <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
-                                           <table className="w-full text-left">
-                                              <thead className="bg-zinc-50/50 border-b border-zinc-100 text-[10px] font-bold text-zinc-400 uppercase">
-                                                 <tr>
-                                                    <th className="px-4 py-2">Date</th>
-                                                    <th className="px-4 py-2">Order</th>
-                                                    <th className="px-4 py-2">Items</th>
-                                                    <th className="px-4 py-2 text-right">Amount</th>
-                                                    <th className="px-4 py-2 text-right">Status</th>
-                                                 </tr>
-                                              </thead>
-                                              <tbody className="divide-y divide-zinc-50">
-                                                 {c.history.map((h) => (
-                                                    <tr key={h.id} className="text-xs text-zinc-600">
-                                                       <td className="px-4 py-2.5">{h.date}</td>
-                                                       <td className="px-4 py-2.5 font-mono text-black">#{h.id.split('-')[1]}</td>
-                                                       <td className="px-4 py-2.5">{h.items}</td>
-                                                       <td className="px-4 py-2.5 text-right font-mono">₹{h.amount.toLocaleString()}</td>
-                                                       <td className="px-4 py-2.5 text-right">
-                                                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
-                                                             h.status === "DELIVERED" ? "bg-zinc-100 border-zinc-200 text-zinc-700" :
-                                                             h.status === "PENDING" ? "bg-yellow-50 border-yellow-200 text-yellow-700" :
-                                                             "bg-white border-zinc-200"
-                                                          }`}>
-                                                             {h.status}
-                                                          </span>
-                                                       </td>
-                                                    </tr>
-                                                 ))}
-                                              </tbody>
-                                           </table>
-                                        </div>
-                                     ) : (
-                                        <p className="text-xs text-zinc-400 italic">No recent orders.</p>
-                                     )}
-                                  </div>
-                               </td>
-                            </tr>
-                         )}
-                      </React.Fragment>
-                   ))}
-                </tbody>
-             </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="border-t border-zinc-100 px-6 py-4 flex justify-between items-center bg-zinc-50/30">
-             <span className="text-xs text-zinc-500">
-               Showing <span className="font-bold text-zinc-900">{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredCustomers.length)}</span> of {filteredCustomers.length}
-             </span>
-             <div className="flex gap-2">
-               <button 
-                 onClick={() => setCurrentPage(p => Math.max(1, p-1))}
-                 disabled={currentPage === 1}
-                 className="p-1.5 border border-zinc-200 bg-white rounded hover:bg-zinc-50 disabled:opacity-50 transition"
-               >
-                 <HiChevronLeft className="text-zinc-600" />
-               </button>
-               <button 
-                 onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))}
-                 disabled={currentPage === totalPages}
-                 className="p-1.5 border border-zinc-200 bg-white rounded hover:bg-zinc-50 disabled:opacity-50 transition"
-               >
-                 <HiChevronRight className="text-zinc-600" />
-               </button>
-             </div>
-          </div>
-
         </div>
       </div>
+
+      {/* --- CUSTOMER TABLE --- */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="border border-neutral-200 bg-white overflow-x-auto"
+      >
+        <table className="w-full min-w-[800px]">
+          <thead>
+            <tr className="border-b border-neutral-200">
+              <th className="text-left py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Customer</th>
+              <th className="text-left py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Status</th>
+              <th className="text-left py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Orders</th>
+              <th className="text-left py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Spent</th>
+              <th className="text-left py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Last Order</th>
+              <th className="text-left py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Joined</th>
+              <th className="text-right py-4 px-6 text-[10px] tracking-[0.15em] uppercase text-neutral-400 font-normal">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-neutral-400 text-sm">
+                  Loading customers...
+                </td>
+              </tr>
+            ) : filteredCustomers.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-neutral-400 text-sm">
+                  No customers found
+                </td>
+              </tr>
+            ) : (
+              filteredCustomers.map((customer, i) => (
+                <motion.tr 
+                  key={customer.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/50 transition"
+                >
+                  <td className="py-4 px-6">
+                    <Link href={`/admin/customers/${customer.id}`} className="group">
+                      <p className="text-sm font-light text-neutral-900 group-hover:underline underline-offset-4">
+                        {customer.name}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">{customer.email}</p>
+                    </Link>
+                  </td>
+                  <td className="py-4 px-6">
+                    <StatusBadge status={customer.status} />
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-sm font-light text-neutral-900">{customer.orders}</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-sm font-light text-neutral-900">₹{customer.spent.toLocaleString()}</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-xs text-neutral-500">{customer.lastOrder}</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-xs text-neutral-500">{customer.joinedAt}</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center justify-end gap-2">
+                      <button className="p-2 hover:bg-neutral-100 transition">
+                        <HiOutlineEnvelope className="w-4 h-4 text-neutral-500" />
+                      </button>
+                      <button className="p-2 hover:bg-neutral-100 transition">
+                        <HiOutlineEllipsisVertical className="w-4 h-4 text-neutral-500" />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </motion.div>
     </div>
   );
 }

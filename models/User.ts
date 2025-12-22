@@ -23,13 +23,13 @@ const UserSchema = new Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     status: { type: String, enum: ["active", "blocked"], default: "active" },
 
-    // 2️⃣ Address Management
+    //  Address Management
     addresses: [AddressSchema],
 
-    // 6️⃣ Wishlist
+    //  Wishlist
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
 
-    // 7️⃣ Cart (Server-side sync)
+    //  Cart (Server-side sync)
     cart: [
       {
         productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },

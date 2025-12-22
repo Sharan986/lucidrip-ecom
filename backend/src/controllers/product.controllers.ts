@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Product from "../models/product.model";
+import { getErrorMessage } from "../utils/errorHandler";
 
 // --- 1. SEED DATA 
 const productsToSeed = [
@@ -249,31 +250,29 @@ const productsToSeed = [
 
 
 // @route   POST /api/products/seed
-export const seedProducts = async (req: Request, res: Response): Promise<void> => {
+export const seedProducts = async (_req: Request, res: Response): Promise<void> => {
   try {
-    await Product.deleteMany({}); // Safety: prevent duplicates
+    await Product.deleteMany({});
     const createdProducts = await Product.insertMany(productsToSeed);
     
-    console.log(`Seeded ${createdProducts.length} products`);
     res.status(201).json({ 
         success: true, 
         message: "Database seeded successfully", 
         count: createdProducts.length 
     });
-  } catch (error: any) {
-    console.error("Seed Error:", error);
-    res.status(500).json({ success: false, message: "Seed failed", error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: "Seed failed", error: getErrorMessage(error) });
   }
 };
 
 //   Fetch all products
 // @route   GET /api/products
-export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
+export const getAllProducts = async (_req: Request, res: Response): Promise<void> => {
   try {
     const products = await Product.find({});
     res.status(200).json(products);
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: "Server Error" });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: getErrorMessage(error) });
   }
 };
 
@@ -288,8 +287,8 @@ export const getProductBySlug = async (req: Request, res: Response): Promise<voi
     } else {
       res.status(404).json({ success: false, message: "Product not found" });
     }
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: "Server Error" });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, message: getErrorMessage(error) });
   }
 };
 
@@ -297,9 +296,78 @@ export const getProductBySlug = async (req: Request, res: Response): Promise<voi
 // @route   POST /api/products
 export const createProduct = async (req: Request, res: Response): Promise<void> => {
     try {
-      const product = await Product.create(req.body);
-      res.status(201).json(product);
-    } catch (error: any) {
-      res.status(400).json({ message: "Invalid product data", error: error.message });
+      const { name, description, price, image, sizes, colors, stock, category } = req.body;
+      
+      // Generate slug from name
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      
+      const product = await Product.create({
+        name,
+        slug,
+        description,
+        price,
+        image: image || "/Hero/Product1.avif",
+        sizes: sizes || ["S", "M", "L", "XL"],
+        colors: colors || ["Black"],
+        stock: stock || 0,
+        category: category || "General"
+      });
+      
+      res.status(201).json({ success: true, product });
+    } catch (error: unknown) {
+      res.status(400).json({ success: false, message: "Invalid product data", error: getErrorMessage(error) });
+    }
+};
+
+// @desc    Update a product (Admin)
+// @route   PUT /api/products/:id
+export const updateProduct = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { name, description, price, image, sizes, colors, stock, category } = req.body;
+      
+      const product = await Product.findById(req.params.id);
+      
+      if (!product) {
+        res.status(404).json({ success: false, message: "Product not found" });
+        return;
+      }
+      
+      // Update fields if provided
+      if (name) {
+        product.name = name;
+        product.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      }
+      if (description) product.description = description;
+      if (price !== undefined) product.price = price;
+      if (image) product.image = image;
+      if (sizes) product.sizes = sizes;
+      if (colors) product.colors = colors;
+      if (stock !== undefined) product.stock = stock;
+      if (category) product.category = category;
+      
+      const updatedProduct = await product.save();
+      
+      res.status(200).json({ success: true, product: updatedProduct });
+    } catch (error: unknown) {
+      res.status(400).json({ success: false, message: "Failed to update product", error: getErrorMessage(error) });
+    }
+};
+
+// @desc    Delete a product (Admin)
+// @route   DELETE /api/products/:id
+export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const product = await Product.findById(req.params.id);
+      
+      if (!product) {
+        res.status(404).json({ success: false, message: "Product not found" });
+        return;
+      }
+      
+      await Product.findByIdAndDelete(req.params.id);
+      
+      res.status(200).json({ success: true, message: "Product deleted successfully" });
+    } catch (error: unknown) {
+      res.status(500).json({ success: false, message: "Failed to delete product", error: getErrorMessage(error) });
     }
 };

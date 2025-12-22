@@ -5,6 +5,7 @@ interface CheckoutStepState {
   goToStep: (step: number) => void;
   nextStep: () => void;
   prevStep: () => void;
+  resetStep: () => void;
 }
 
 export const useCheckoutStepStore = create<CheckoutStepState>((set) => ({
@@ -21,4 +22,6 @@ export const useCheckoutStepStore = create<CheckoutStepState>((set) => ({
     set((state) => ({
       step: Math.max(state.step - 1, 1),
     })),
+
+  resetStep: () => set({ step: 1 }),
 }));

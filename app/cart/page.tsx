@@ -3,120 +3,105 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCartStore } from '@/store/useCartStore';
+import { useCartStore, CartItem as CartItemType } from '@/store/useCartStore';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   HiOutlineTrash, 
   HiOutlineMinus, 
   HiOutlinePlus, 
-  HiOutlineArrowLeft,
-  HiOutlineArrowRight, // ✅ Fixed: Added missing import
+  HiArrowLeft,
+  HiArrowRight,
   HiOutlineShoppingBag,
-  HiOutlineTag,
   HiOutlineTruck,
-  HiCheckCircle
+  HiOutlineShieldCheck,
+  HiOutlineArrowPath,
+  HiXMark
 } from "react-icons/hi2";
 
 // --- TYPES ---
 interface CartItemProps {
-  item: any;
+  item: CartItemType;
   updateQuantity: (id: string, type: 'increase' | 'decrease') => void;
   removeItem: (id: string) => void;
+  index: number;
 }
 
 // --- SUB-COMPONENT: CART ITEM ---
-const CartItem = React.memo(({ item, updateQuantity, removeItem }: CartItemProps) => {
-  
-  // ✅ FIX: Ensure we have a valid ID. Fallback to item.id if uniqueId is missing.
-  const itemId = item.uniqueId || item.id; 
-
-  // Debug wrappers to help you see if it works
-  const handleIncrease = () => {
-    console.log("Increasing item:", itemId);
-    updateQuantity(itemId, 'increase');
-  };
-
-  const handleDecrease = () => {
-    console.log("Decreasing item:", itemId);
-    updateQuantity(itemId, 'decrease');
-  };
-
-  const handleRemove = () => {
-    console.log("Removing item:", itemId);
-    removeItem(itemId);
-  };
+const CartItem = React.memo(({ item, updateQuantity, removeItem, index }: CartItemProps) => {
+  const itemId = item.uniqueId;
 
   return (
-    <div className="flex gap-4 sm:gap-6 py-6 border-b border-gray-100 last:border-0 animate-in fade-in duration-300">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -100 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      className="flex gap-6 py-8 border-b border-neutral-100"
+    >
       {/* Image */}
-      <div className="relative h-32 w-24 sm:h-40 sm:w-32 flex-shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+      <Link href={`/product/${item.slug || '#'}`} className="relative h-32 w-24 md:h-40 md:w-32 flex-shrink-0 overflow-hidden bg-neutral-50 group">
         <Image 
           src={item.img} 
           alt={item.name} 
           fill 
           sizes="(max-width: 768px) 100px, 150px"
-          className="object-cover" 
+          className="object-cover transition-transform duration-500 group-hover:scale-105" 
         />
-      </div>
+      </Link>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col justify-between">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 leading-tight line-clamp-2">
-              <Link href={`/product/${item.slug}`} className="hover:underline">
+      <div className="flex flex-1 flex-col justify-between min-w-0">
+        <div className="flex justify-between items-start gap-4">
+          <div className="min-w-0">
+            <Link href={`/product/${item.slug || '#'}`} className="block">
+              <h3 className="text-sm md:text-base tracking-wide text-neutral-900 hover:underline underline-offset-4 decoration-neutral-300 truncate">
                 {item.name}
-              </Link>
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 font-medium">
-              {item.size} <span className="mx-1 text-gray-300">|</span> {item.color}
+              </h3>
+            </Link>
+            <p className="mt-2 text-xs tracking-[0.1em] text-neutral-400 uppercase">
+              {item.size} <span className="mx-2">·</span> {item.color}
             </p>
-            {item.stock && item.stock < 5 && (
-               <p className="text-xs text-red-500 font-bold mt-1">Only {item.stock} left!</p>
-            )}
           </div>
-          <p className="text-base sm:text-lg font-bold text-gray-900">
-            ₹{(item.price * item.quantity).toLocaleString()}
-          </p>
+          <button 
+            onClick={() => removeItem(itemId)}
+            className="p-2 text-neutral-300 hover:text-black transition-colors flex-shrink-0"
+            aria-label="Remove item"
+          >
+            <HiXMark size={18} />
+          </button>
         </div>
 
-        {/* Actions Row */}
-        <div className="flex items-center justify-between mt-4">
-          
+        {/* Bottom Row */}
+        <div className="flex items-end justify-between mt-4">
           {/* Quantity Selector */}
-          <div className="flex items-center border border-gray-200 rounded-full px-1 py-1 bg-white shadow-sm">
+          <div className="flex items-center border border-neutral-200">
             <button 
-              onClick={handleDecrease}
+              onClick={() => updateQuantity(itemId, 'decrease')}
               disabled={item.quantity <= 1}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-600 transition-all"
+              className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 transition-colors"
             >
-              <HiOutlineMinus size={14} />
+              <HiOutlineMinus size={12} />
             </button>
             
-            <span className="w-8 text-center font-bold text-sm text-gray-900 select-none">
+            <span className="w-10 text-center text-sm font-medium text-neutral-900 select-none">
               {item.quantity}
             </span>
             
             <button 
-              onClick={handleIncrease}
-              disabled={item.quantity >= 10} 
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-600 transition-all"
+              onClick={() => updateQuantity(itemId, 'increase')}
+              className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:bg-neutral-50 transition-colors"
             >
-              <HiOutlinePlus size={14} />
+              <HiOutlinePlus size={12} />
             </button>
           </div>
 
-          {/* Remove Button */}
-          <button 
-            onClick={handleRemove}
-            className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-red-600 transition-colors p-2"
-          >
-            <HiOutlineTrash size={16} />
-            <span className="hidden sm:inline">Remove</span>
-          </button>
-          
+          {/* Price */}
+          <p className="text-base font-medium text-neutral-900">
+            ₹{(item.price * item.quantity).toLocaleString()}
+          </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 });
 
@@ -125,156 +110,238 @@ CartItem.displayName = 'CartItem';
 // --- MAIN PAGE ---
 export default function CartPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
   const { items, removeItem, updateQuantity, getCartTotal } = useCartStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Optimized Calculations
+  // Calculations
   const subtotal = useMemo(() => getCartTotal(), [items, getCartTotal]);
   const shippingThreshold = 2500; 
-  const shippingCost = subtotal > shippingThreshold ? 0 : 99;
+  const isFreeShipping = subtotal >= shippingThreshold;
+  const shippingCost = isFreeShipping ? 0 : 150;
   const progressPercent = Math.min((subtotal / shippingThreshold) * 100, 100);
   const total = subtotal + shippingCost;
+  const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
   if (!isMounted) return null;
 
   // --- EMPTY STATE ---
   if (items.length === 0) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 animate-in zoom-in-95 duration-500">
-        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-sm">
-            <HiOutlineShoppingBag className="text-4xl text-gray-300" />
-        </div>
-        <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Your Cart is Empty</h2>
-        <p className="text-gray-500 mb-8 max-w-md text-lg">
-          Looks like you haven&apos;t made your choice yet. The latest drops are waiting.
-        </p>
-        <Link 
-          href="/" 
-          className="bg-black text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-zinc-800 transition shadow-xl hover:shadow-2xl hover:-translate-y-1"
+      <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
         >
-          Explore Collection
-        </Link>
+          <div className="w-20 h-20 border border-neutral-200 flex items-center justify-center mb-8">
+            <HiOutlineShoppingBag className="text-3xl text-neutral-300" />
+          </div>
+          <p className="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-4">Your Bag</p>
+          <h2 className="text-3xl md:text-4xl font-extralight tracking-tight mb-4">
+            Your bag is <span className="italic">empty</span>
+          </h2>
+          <p className="text-neutral-500 mb-10 max-w-sm">
+            Discover our latest collection of premium essentials crafted for the modern minimalist.
+          </p>
+          <Link 
+            href="/products" 
+            className="inline-block px-10 py-4 bg-black text-white text-xs tracking-[0.2em] uppercase hover:bg-neutral-800 transition-colors"
+          >
+            Explore Collection
+          </Link>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
-      <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-8 tracking-tight">Shopping Bag <span className="text-gray-400 font-medium text-lg ml-2">({items.length} Items)</span></h1>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-neutral-100">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-8 md:py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <p className="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-3">Shopping Bag</p>
+            <h1 className="text-3xl md:text-5xl font-extralight tracking-tight">
+              Your <span className="italic">Bag</span>
+              <span className="text-neutral-400 text-lg md:text-xl font-normal ml-4">({itemCount} {itemCount === 1 ? 'item' : 'items'})</span>
+            </h1>
+          </motion.div>
+        </div>
+      </div>
 
-      <div className="flex flex-col lg:flex-row gap-12 relative">
-        
-        {/* --- LEFT: Cart Items List --- */}
-        <div className="flex-grow">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-8 md:py-12">
+        <div className="flex flex-col lg:flex-row gap-12 lg:gap-16">
           
-          {/* Free Shipping Progress Bar */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-8">
-             <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                  <HiOutlineTruck /> 
-                  {progressPercent === 100 ? "You've unlocked Free Shipping!" : `Add ₹${(shippingThreshold - subtotal).toLocaleString()} for Free Shipping`}
-                </span>
-                <span className="text-xs font-bold text-gray-900">{Math.round(progressPercent)}%</span>
-             </div>
-             <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-1000 ease-out rounded-full ${progressPercent === 100 ? 'bg-green-500' : 'bg-black'}`}
-                  style={{ width: `${progressPercent}%` }}
-                ></div>
-             </div>
-          </div>
-
-          <div className="border-t border-gray-100">
-            {items.map((item, index) => (
-              <CartItem 
-                key={item.uniqueId || index} 
-                item={item} 
-                updateQuantity={updateQuantity}
-                removeItem={removeItem}
-              />
-            ))}
-          </div>
-
-          <Link href="/" className="inline-flex items-center gap-2 mt-8 text-sm font-bold text-black hover:text-gray-600 transition">
-            <HiOutlineArrowLeft />
-            Continue Shopping
-          </Link>
-        </div>
-
-        {/* --- RIGHT: Order Summary --- */}
-        <div className="w-full lg:w-[400px] flex-shrink-0">
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 sticky top-24">
-            <h2 className="text-xl font-bold mb-6">Order Summary</h2>
+          {/* --- LEFT: Cart Items --- */}
+          <div className="flex-grow">
             
-            {/* Coupon Code */}
-            <div className="mb-6">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Promo Code</label>
-              <div className="flex gap-2">
-                <div className="relative flex-grow">
-                   <HiOutlineTag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                   <input 
-                      type="text" 
-                      placeholder="Enter code" 
-                      className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-black transition"
-                   />
-                </div>
-                <button className="bg-black text-white px-4 rounded-xl text-sm font-bold hover:bg-zinc-800 transition">
-                  Apply
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 mb-6 border-b border-gray-100 pb-6 border-dashed">
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Subtotal</span>
-                <span className="text-gray-900">₹{subtotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Shipping</span>
-                <span className={shippingCost === 0 ? "text-green-600 font-bold" : "text-gray-900"}>
-                  {shippingCost === 0 ? "Free" : `₹${shippingCost}`}
-                </span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                 <span>Tax (Included)</span>
-                 <span className="text-gray-900">₹0</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between text-xl font-black text-gray-900 mb-1">
-              <span>Total</span>
-              <span>₹{total.toLocaleString()}</span>
-            </div>
-            <p className="text-xs text-gray-400 text-right mb-8">Including GST</p>
-
-            <Link 
-              href="/checkout"
-              className="w-full flex items-center justify-center gap-2 bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-xl"
+            {/* Free Shipping Progress */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="mb-8 p-6 border border-neutral-100"
             >
-              Checkout <HiOutlineArrowRight />
-            </Link>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <HiOutlineTruck className="text-lg text-neutral-400" />
+                  <span className="text-sm tracking-wide">
+                    {isFreeShipping 
+                      ? <span className="text-emerald-600">You've unlocked free shipping!</span>
+                      : <>Add <span className="font-medium">₹{(shippingThreshold - subtotal).toLocaleString()}</span> for free shipping</>
+                    }
+                  </span>
+                </div>
+                <span className="text-xs tracking-[0.1em] text-neutral-400">{Math.round(progressPercent)}%</span>
+              </div>
+              <div className="w-full h-px bg-neutral-200 overflow-hidden">
+                <motion.div 
+                  className={`h-full ${isFreeShipping ? 'bg-emerald-500' : 'bg-black'}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                />
+              </div>
+            </motion.div>
 
-            {/* Trust Badges */}
-            <div className="mt-8 grid grid-cols-3 gap-2 text-center">
-               <div className="flex flex-col items-center gap-1">
-                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><HiCheckCircle /></div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Secure</span>
-               </div>
-               <div className="flex flex-col items-center gap-1">
-                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><HiOutlineTruck /></div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Fast</span>
-               </div>
-               <div className="flex flex-col items-center gap-1">
-                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><HiOutlineShoppingBag /></div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Easy</span>
-               </div>
-            </div>
+            {/* Cart Items */}
+            <AnimatePresence mode="popLayout">
+              {items.map((item, index) => (
+                <CartItem 
+                  key={item.uniqueId} 
+                  item={item} 
+                  updateQuantity={updateQuantity}
+                  removeItem={removeItem}
+                  index={index}
+                />
+              ))}
+            </AnimatePresence>
+
+            {/* Continue Shopping */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Link 
+                href="/products" 
+                className="inline-flex items-center gap-3 mt-8 text-sm tracking-wide hover:opacity-60 transition-opacity"
+              >
+                <HiArrowLeft className="text-sm" />
+                Continue Shopping
+              </Link>
+            </motion.div>
           </div>
-        </div>
 
+          {/* --- RIGHT: Order Summary --- */}
+          <div className="w-full lg:w-[400px] flex-shrink-0">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="lg:sticky lg:top-24"
+            >
+              <div className="border border-neutral-100 p-6 md:p-8">
+                <h2 className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-8">Order Summary</h2>
+                
+                {/* Promo Code */}
+                <div className="mb-8 pb-8 border-b border-neutral-100">
+                  <label className="text-xs tracking-[0.15em] uppercase text-neutral-400 mb-3 block">Promo Code</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      placeholder="Enter code" 
+                      className="flex-grow px-4 py-3 border border-neutral-200 text-sm tracking-wide placeholder:text-neutral-300 focus:outline-none focus:border-black transition-colors"
+                    />
+                    <button className="px-6 py-3 bg-black text-white text-xs tracking-[0.1em] uppercase hover:bg-neutral-800 transition-colors">
+                      Apply
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div className="space-y-4 mb-8 pb-8 border-b border-neutral-100">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-500">Subtotal</span>
+                    <span className="text-neutral-900">₹{subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-500">Shipping</span>
+                    <span className={shippingCost === 0 ? "text-emerald-600" : "text-neutral-900"}>
+                      {shippingCost === 0 ? "Complimentary" : `₹${shippingCost}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-sm tracking-wide">Total</span>
+                  <span className="text-2xl font-extralight">₹{total.toLocaleString()}</span>
+                </div>
+                <p className="text-[10px] tracking-[0.1em] text-neutral-400 text-right mb-8">Including GST</p>
+
+                {/* Checkout Button */}
+                <Link 
+                  href="/checkout"
+                  className="group relative w-full flex items-center justify-center gap-3 py-4 bg-black text-white text-xs tracking-[0.2em] uppercase overflow-hidden"
+                >
+                  <span className="relative z-10 transition-colors">Proceed to Checkout</span>
+                  <HiArrowRight className="relative z-10 text-sm transition-transform group-hover:translate-x-1" />
+                </Link>
+
+                {/* Trust Badges */}
+                <div className="mt-8 pt-8 border-t border-neutral-100 grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <HiOutlineShieldCheck className="text-lg mx-auto mb-2 text-neutral-300" />
+                    <p className="text-[9px] tracking-[0.1em] uppercase text-neutral-400">Secure</p>
+                  </div>
+                  <div className="text-center">
+                    <HiOutlineTruck className="text-lg mx-auto mb-2 text-neutral-300" />
+                    <p className="text-[9px] tracking-[0.1em] uppercase text-neutral-400">Fast Shipping</p>
+                  </div>
+                  <div className="text-center">
+                    <HiOutlineArrowPath className="text-lg mx-auto mb-2 text-neutral-300" />
+                    <p className="text-[9px] tracking-[0.1em] uppercase text-neutral-400">Easy Returns</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Need Help */}
+              <div className="mt-6 p-6 border border-neutral-100 text-center">
+                <p className="text-xs tracking-[0.1em] text-neutral-400 mb-2">Need assistance?</p>
+                <Link href="/contact" className="text-sm tracking-wide underline underline-offset-4 hover:opacity-60 transition-opacity">
+                  Contact Support
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Mobile Checkout Bar */}
+      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-neutral-200 p-4 lg:hidden z-50 safe-area-pb">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-neutral-500">Total</span>
+          <span className="text-lg font-medium">₹{total.toLocaleString()}</span>
+        </div>
+        <Link 
+          href="/checkout"
+          className="w-full flex items-center justify-center gap-2 py-4 bg-black text-white text-xs tracking-[0.2em] uppercase"
+        >
+          Checkout
+          <HiArrowRight className="text-sm" />
+        </Link>
       </div>
     </div>
   );

@@ -4,37 +4,39 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation"; 
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { 
-  HiArrowLeft, 
+  HiOutlineArrowLeft, 
   HiOutlinePrinter, 
-  HiOutlineEnvelope, // 👈 1. CHANGED THIS (Fixed Import)
   HiOutlineTruck, 
-  HiOutlineCheckCircle,
-  HiOutlineXCircle,
+  HiOutlineEnvelope,
   HiOutlineMapPin,
   HiOutlineCreditCard,
-  HiOutlineUser
+  HiOutlinePhone
 } from "react-icons/hi2";
 
 // --- MOCK DATA ---
 const ORDER = {
   id: "ORD-9921",
-  date: "Dec 14, 2024 at 10:42 am",
+  date: "Dec 14, 2024",
+  time: "10:42 AM",
   customer: {
     name: "Sumit Kumar",
     email: "sumit@example.com",
     phone: "+91 98765 43210",
     orders_count: 5
   },
-  status: "Unfulfilled", 
-  payment_status: "Paid", 
-  shipping_address: {
+  status: "Processing", 
+  payment: {
+    status: "Paid",
+    method: "UPI"
+  },
+  shipping: {
     line1: "Flat 402, Sunshine Apartments",
     line2: "Indiranagar, 100ft Road",
     city: "Bangalore",
-    state: "KA",
-    zip: "560038",
-    country: "India"
+    state: "Karnataka",
+    zip: "560038"
   },
   items: [
     { id: 101, name: "Oversized Street Hoodie", sku: "HD-BLK-L", price: 2499, quantity: 1, img: "/Hero/Product1.avif", variant: "L / Black" },
@@ -48,217 +50,261 @@ const ORDER = {
     total: 4498
   },
   timeline: [
-    { id: 1, type: "order_placed", text: "Order placed by Sumit Kumar", date: "Dec 14, 10:42 am" },
-    { id: 2, type: "payment_verified", text: "Payment of ₹4,498 verified via UPI", date: "Dec 14, 10:43 am" },
+    { id: 1, status: "Order Placed", date: "Dec 14, 10:42 AM", completed: true },
+    { id: 2, status: "Payment Confirmed", date: "Dec 14, 10:43 AM", completed: true },
+    { id: 3, status: "Processing", date: "Dec 14, 11:00 AM", completed: true },
+    { id: 4, status: "Shipped", date: "—", completed: false },
+    { id: 5, status: "Delivered", date: "—", completed: false },
   ]
 };
 
-export default function AdminOrderDetails() {
-  const params = useParams();
-  const [status, setStatus] = useState(ORDER.status);
-
-  // --- HANDLERS ---
-  const handleFulfill = () => {
-    setStatus("Fulfilled");
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    Paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Pending: "bg-amber-50 text-amber-700 border-amber-200",
+    Processing: "bg-blue-50 text-blue-700 border-blue-200",
+    Shipped: "bg-violet-50 text-violet-700 border-violet-200",
+    Delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Cancelled: "bg-red-50 text-red-700 border-red-200",
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20 text-zinc-900 font-sans">
+    <span className={`inline-flex items-center px-2 py-0.5 text-[10px] tracking-[0.1em] uppercase border ${styles[status] || styles.Pending}`}>
+      {status}
+    </span>
+  );
+};
+
+export default function OrderDetailPage() {
+  const params = useParams();
+  const [orderStatus, setOrderStatus] = useState(ORDER.status);
+
+  const handleFulfill = () => {
+    setOrderStatus("Shipped");
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl">
       
       {/* --- HEADER --- */}
-      <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-           <div className="flex items-center gap-4">
-              <Link href="/admin/orders" className="p-2 border border-zinc-200 bg-white rounded-lg hover:bg-zinc-50 text-zinc-500 transition">
-                 <HiArrowLeft />
-              </Link>
-              <div>
-                 <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold tracking-tight">Order #{ORDER.id}</h1>
-                    <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide border border-yellow-200">
-                       {ORDER.payment_status}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide border ${status === 'Fulfilled' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
-                       {status}
-                    </span>
-                 </div>
-                 <p className="text-sm text-zinc-500 mt-1">{ORDER.date}</p>
-              </div>
-           </div>
-
-           <div className="flex gap-2">
-              <button className="px-4 py-2 border border-zinc-200 bg-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-zinc-50 transition flex items-center gap-2">
-                 <HiOutlinePrinter className="text-lg" /> Invoice
-              </button>
-              {status !== "Fulfilled" && (
-                 <button 
-                   onClick={handleFulfill}
-                   className="px-6 py-2 bg-black text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition shadow-lg flex items-center gap-2"
-                 >
-                    <HiOutlineTruck className="text-lg" /> Fulfill Item
-                 </button>
-              )}
-           </div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/admin/orders"
+            className="p-2 border border-neutral-200 hover:border-neutral-900 transition"
+          >
+            <HiOutlineArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-extralight text-neutral-900">
+                <span className="italic">{ORDER.id}</span>
+              </h1>
+              <StatusBadge status={ORDER.payment.status} />
+              <StatusBadge status={orderStatus} />
+            </div>
+            <p className="text-[11px] text-neutral-500">{ORDER.date} at {ORDER.time}</p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           
-           {/* ====================
-               LEFT COLUMN (Details)
-           ==================== */}
-           <div className="lg:col-span-2 space-y-6">
-              
-              {/* 1. Order Items */}
-              <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-                 <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
-                    <h3 className="text-sm font-bold uppercase text-zinc-500 tracking-wider">Line Items</h3>
-                    <p className="text-xs font-bold text-zinc-400">{ORDER.items.length} Items</p>
-                 </div>
-                 <div className="divide-y divide-zinc-100">
-                    {ORDER.items.map((item) => (
-                       <div key={item.id} className="p-4 flex gap-4 items-center group hover:bg-zinc-50/50 transition">
-                          <div className="relative w-16 h-16 border border-zinc-200 rounded-md overflow-hidden bg-zinc-100">
-                             <Image src={item.img} alt={item.name} fill className="object-cover" />
-                          </div>
-                          <div className="flex-1">
-                             <p className="text-sm font-bold text-zinc-900 group-hover:text-blue-600 transition cursor-pointer">{item.name}</p>
-                             <p className="text-xs text-zinc-500 mt-0.5">{item.variant}</p>
-                             <p className="text-[10px] text-zinc-400 mt-1 font-mono uppercase">SKU: {item.sku}</p>
-                          </div>
-                          <div className="text-right">
-                             <p className="text-sm font-medium text-zinc-900">₹{item.price.toLocaleString()} x {item.quantity}</p>
-                             <p className="text-sm font-bold text-zinc-900">₹{(item.price * item.quantity).toLocaleString()}</p>
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-                 {/* Financials */}
-                 <div className="bg-zinc-50/50 p-6 border-t border-zinc-100 space-y-2">
-                    <div className="flex justify-between text-sm text-zinc-500">
-                       <span>Subtotal</span>
-                       <span>₹{ORDER.totals.subtotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-zinc-500">
-                       <span>Shipping</span>
-                       <span>₹{ORDER.totals.shipping.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-zinc-500">
-                       <span>Tax</span>
-                       <span>₹{ORDER.totals.tax.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-base font-bold text-zinc-900 pt-4 border-t border-zinc-200 mt-4">
-                       <span>Total</span>
-                       <span>₹{ORDER.totals.total.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-zinc-500 pt-1">
-                       <span>Paid by customer</span>
-                       <span>₹{ORDER.totals.total.toLocaleString()}</span>
-                    </div>
-                 </div>
+        <div className="flex gap-2">
+          <button className="px-4 py-2.5 border border-neutral-200 text-neutral-700 text-xs tracking-[0.1em] uppercase hover:border-neutral-900 transition flex items-center gap-2">
+            <HiOutlinePrinter className="w-4 h-4" /> Invoice
+          </button>
+          {orderStatus !== "Shipped" && orderStatus !== "Delivered" && (
+            <button 
+              onClick={handleFulfill}
+              className="px-4 py-2.5 bg-neutral-900 text-white text-xs tracking-[0.1em] uppercase hover:bg-neutral-800 transition flex items-center gap-2"
+            >
+              <HiOutlineTruck className="w-4 h-4" /> Ship Order
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* --- LEFT COLUMN --- */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Order Items */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="border border-neutral-200 bg-white"
+          >
+            <div className="px-6 py-4 border-b border-neutral-200 flex justify-between items-center">
+              <h2 className="text-[10px] tracking-[0.2em] uppercase text-neutral-400">
+                Order Items
+              </h2>
+              <span className="text-[10px] text-neutral-500">{ORDER.items.length} items</span>
+            </div>
+            
+            <div className="divide-y divide-neutral-100">
+              {ORDER.items.map((item) => (
+                <div key={item.id} className="p-4 flex gap-4 items-center hover:bg-neutral-50/50 transition">
+                  <div className="relative w-16 h-20 bg-neutral-100 flex-shrink-0">
+                    <Image src={item.img} alt={item.name} fill className="object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-light text-neutral-900">{item.name}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">{item.variant}</p>
+                    <p className="text-[10px] text-neutral-400 mt-1 font-mono">SKU: {item.sku}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-neutral-500">₹{item.price.toLocaleString()} × {item.quantity}</p>
+                    <p className="text-sm font-light text-neutral-900 mt-1">₹{(item.price * item.quantity).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals */}
+            <div className="px-6 py-4 border-t border-neutral-200 bg-neutral-50/50 space-y-2">
+              <div className="flex justify-between text-sm font-light">
+                <span className="text-neutral-500">Subtotal</span>
+                <span className="text-neutral-900">₹{ORDER.totals.subtotal.toLocaleString()}</span>
               </div>
-
-              {/* 2. Timeline */}
-              <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-                 <h3 className="text-sm font-bold uppercase text-zinc-500 tracking-wider mb-6">Timeline</h3>
-                 <div className="space-y-6 relative pl-2">
-                    {/* Vertical Line */}
-                    <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-zinc-100"></div>
-                    
-                    {ORDER.timeline.map((event) => (
-                       <div key={event.id} className="relative flex gap-4 pl-6">
-                          <div className="absolute left-0 top-1 w-4 h-4 bg-zinc-200 rounded-full border-2 border-white"></div>
-                          <div>
-                             <p className="text-sm text-zinc-900">{event.text}</p>
-                             <p className="text-xs text-zinc-400 mt-1">{event.date}</p>
-                          </div>
-                       </div>
-                    ))}
-                    
-                    {/* Add Comment Input */}
-                    <div className="relative flex gap-4 pl-6 mt-4">
-                       <div className="absolute left-0 top-3 w-4 h-4 bg-zinc-200 rounded-full border-2 border-white"></div>
-                       <div className="w-full">
-                          <input 
-                            type="text" 
-                            placeholder="Leave a comment..." 
-                            className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-zinc-400 transition"
-                          />
-                       </div>
-                    </div>
-                 </div>
+              <div className="flex justify-between text-sm font-light">
+                <span className="text-neutral-500">Shipping</span>
+                <span className="text-neutral-900">₹{ORDER.totals.shipping.toLocaleString()}</span>
               </div>
-
-           </div>
-
-           {/* ====================
-               RIGHT COLUMN (Customer & Meta)
-           ==================== */}
-           <div className="lg:col-span-1 space-y-6">
-              
-              {/* Customer Card */}
-              <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xs font-bold uppercase text-zinc-500 tracking-wider">Customer</h3>
-                    <Link href={`/admin/customers/${ORDER.customer.email}`} className="text-blue-600 text-xs font-bold hover:underline">View Profile</Link>
-                 </div>
-                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-500">
-                       <HiOutlineUser className="text-lg" />
-                    </div>
-                    <div>
-                       <p className="text-sm font-bold text-zinc-900 hover:text-blue-600 cursor-pointer">{ORDER.customer.name}</p>
-                       <p className="text-xs text-zinc-500">{ORDER.customer.orders_count} orders</p>
-                    </div>
-                 </div>
-                 
-                 <div className="space-y-3 pt-4 border-t border-zinc-100">
-                    <div className="flex justify-between items-center">
-                       <h4 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">Contact Info</h4>
-                       <button className="text-zinc-400 hover:text-black">
-                          <HiOutlineEnvelope /> {/* 👈 2. CORRECTED USAGE */}
-                       </button>
-                    </div>
-                    <p className="text-sm text-blue-600 hover:underline cursor-pointer">{ORDER.customer.email}</p>
-                    <p className="text-sm text-zinc-600">{ORDER.customer.phone}</p>
-                 </div>
-                 
-                 <div className="space-y-3 pt-4 border-t border-zinc-100 mt-4">
-                    <div className="flex justify-between items-center">
-                       <h4 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">Shipping Address</h4>
-                       <button className="text-zinc-400 hover:text-black"><HiOutlineMapPin /></button>
-                    </div>
-                    <div className="text-sm text-zinc-600 leading-relaxed">
-                       <p>{ORDER.shipping_address.line1}</p>
-                       <p>{ORDER.shipping_address.line2}</p>
-                       <p>{ORDER.shipping_address.city}, {ORDER.shipping_address.state} {ORDER.shipping_address.zip}</p>
-                       <p>{ORDER.shipping_address.country}</p>
-                    </div>
-                 </div>
-
-                 <div className="space-y-3 pt-4 border-t border-zinc-100 mt-4">
-                    <div className="flex justify-between items-center">
-                       <h4 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">Billing Address</h4>
-                    </div>
-                    <p className="text-sm text-zinc-500 italic">Same as shipping address</p>
-                 </div>
+              {ORDER.totals.discount > 0 && (
+                <div className="flex justify-between text-sm font-light">
+                  <span className="text-neutral-500">Discount</span>
+                  <span className="text-emerald-600">-₹{ORDER.totals.discount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-light pt-3 border-t border-neutral-200 mt-3">
+                <span className="text-neutral-900">Total</span>
+                <span className="text-neutral-900">₹{ORDER.totals.total.toLocaleString()}</span>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Tags / Notes */}
-              <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-                 <h3 className="text-xs font-bold uppercase text-zinc-500 tracking-wider mb-4">Tags</h3>
-                 <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded border border-zinc-200">VIP</span>
-                    <span className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded border border-zinc-200">High Value</span>
-                 </div>
-                 <input 
-                   type="text" 
-                   placeholder="Add tag..." 
-                   className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-zinc-400 transition"
-                 />
+          {/* Timeline */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="border border-neutral-200 bg-white p-6"
+          >
+            <h2 className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 mb-6">
+              Order Timeline
+            </h2>
+            
+            <div className="space-y-4">
+              {ORDER.timeline.map((event, i) => (
+                <div key={event.id} className="flex items-start gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3 h-3 border-2 ${event.completed ? 'bg-neutral-900 border-neutral-900' : 'bg-white border-neutral-300'}`} />
+                    {i < ORDER.timeline.length - 1 && (
+                      <div className={`w-px h-8 ${event.completed ? 'bg-neutral-900' : 'bg-neutral-200'}`} />
+                    )}
+                  </div>
+                  <div className="-mt-0.5">
+                    <p className={`text-sm font-light ${event.completed ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                      {event.status}
+                    </p>
+                    <p className="text-[11px] text-neutral-500">{event.date}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* --- RIGHT COLUMN --- */}
+        <div className="space-y-6">
+          
+          {/* Customer Info */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="border border-neutral-200 bg-white p-6"
+          >
+            <h2 className="text-[10px] tracking-[0.2em] uppercase text-neutral-400 mb-6">
+              Customer
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-light text-neutral-900">{ORDER.customer.name}</p>
+                <p className="text-[11px] text-neutral-500">{ORDER.customer.orders_count} orders</p>
               </div>
+              <div className="pt-4 border-t border-neutral-100 space-y-2">
+                <div className="flex items-center gap-3">
+                  <HiOutlineEnvelope className="w-4 h-4 text-neutral-400" />
+                  <a href={`mailto:${ORDER.customer.email}`} className="text-sm font-light text-neutral-900 hover:underline underline-offset-4">
+                    {ORDER.customer.email}
+                  </a>
+                </div>
+                <div className="flex items-center gap-3">
+                  <HiOutlinePhone className="w-4 h-4 text-neutral-400" />
+                  <a href={`tel:${ORDER.customer.phone}`} className="text-sm font-light text-neutral-900 hover:underline underline-offset-4">
+                    {ORDER.customer.phone}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
-           </div>
+          {/* Shipping Address */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="border border-neutral-200 bg-white p-6"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <HiOutlineMapPin className="w-4 h-4 text-neutral-400" />
+              <h2 className="text-[10px] tracking-[0.2em] uppercase text-neutral-400">
+                Shipping Address
+              </h2>
+            </div>
+            <div className="text-sm font-light text-neutral-900 leading-relaxed">
+              <p>{ORDER.shipping.line1}</p>
+              <p>{ORDER.shipping.line2}</p>
+              <p>{ORDER.shipping.city}, {ORDER.shipping.state}</p>
+              <p>{ORDER.shipping.zip}</p>
+            </div>
+          </motion.div>
 
+          {/* Payment Info */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="border border-neutral-200 bg-white p-6"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <HiOutlineCreditCard className="w-4 h-4 text-neutral-400" />
+              <h2 className="text-[10px] tracking-[0.2em] uppercase text-neutral-400">
+                Payment
+              </h2>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-light text-neutral-900">{ORDER.payment.method}</span>
+              <StatusBadge status={ORDER.payment.status} />
+            </div>
+            <p className="text-lg font-light text-neutral-900 mt-3">
+              ₹{ORDER.totals.total.toLocaleString()}
+            </p>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-3"
+          >
+            <button className="w-full py-3 border border-neutral-200 text-neutral-700 text-[10px] tracking-[0.15em] uppercase hover:border-neutral-900 transition flex items-center justify-center gap-2">
+              <HiOutlineEnvelope className="w-4 h-4" /> Email Customer
+            </button>
+            <button className="w-full py-3 border border-red-200 text-red-600 text-[10px] tracking-[0.15em] uppercase hover:bg-red-50 transition">
+              Cancel Order
+            </button>
+          </motion.div>
         </div>
       </div>
     </div>

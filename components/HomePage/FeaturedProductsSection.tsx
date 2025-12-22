@@ -1,27 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { HiOutlineShoppingBag, HiCheck, HiArrowRight } from "react-icons/hi2";
 import { useCartStore } from "@/store/useCartStore"; 
-import { FeatureItem } from "@/type/FeatureItem";
-import { featuredItems } from "@/data/products";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+interface Product {
+  _id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  image: string;
+  sizes: string[];
+  colors: string[];
+  stock: number;
+  category?: string;
+}
 
 // --- 1. DEFINE COMPONENT OUTSIDE (Fixes the Error) ---
 interface QuickAddProps {
-  item: FeatureItem;
+  item: Product;
   customClass?: string;
-  loadingId: number | null;
-  addedId: number | null;
-  onAdd: (e: React.MouseEvent, item: FeatureItem) => void;
+  loadingId: string | null;
+  addedId: string | null;
+  onAdd: (e: React.MouseEvent, item: Product) => void;
 }
 
 const QuickAddButton = ({ item, customClass, loadingId, addedId, onAdd }: QuickAddProps) => (
   <button
     onClick={(e) => onAdd(e, item)}
     className={`flex items-center justify-center rounded-full shadow-xl transition-all duration-300 z-20 
-      ${addedId === item.id 
+      ${addedId === item._id 
         ? "bg-green-500 text-white scale-110" 
         : "bg-white text-black hover:bg-black hover:text-white hover:scale-110"
       }
@@ -29,9 +42,9 @@ const QuickAddButton = ({ item, customClass, loadingId, addedId, onAdd }: QuickA
     `}
     title="Add to Cart"
   >
-      {loadingId === item.id ? (
+      {loadingId === item._id ? (
         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-      ) : addedId === item.id ? (
+      ) : addedId === item._id ? (
         <HiCheck className="text-xl" />
       ) : (
         <HiOutlineShoppingBag className="text-xl" />
@@ -41,36 +54,69 @@ const QuickAddButton = ({ item, customClass, loadingId, addedId, onAdd }: QuickA
 
 // --- MAIN COMPONENT ---
 const FeaturedProductsSection = () => {
-  const heroProduct = featuredItems[0];
-  const gridProducts = featuredItems.slice(1, 5);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/products`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setProducts(data.slice(0, 5));
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const heroProduct = products[0];
+  const gridProducts = products.slice(1, 5);
 
   // --- CART LOGIC ---
   const addItem = useCartStore((state) => state.addItem);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
-  const [addedId, setAddedId] = useState<number | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [addedId, setAddedId] = useState<string | null>(null);
 
-  const handleQuickAdd = (e: React.MouseEvent, item: FeatureItem) => {
+  const handleQuickAdd = (e: React.MouseEvent, item: Product) => {
     e.preventDefault(); 
     e.stopPropagation();
     
-    setLoadingId(item.id);
+    setLoadingId(item._id);
 
     addItem({
-      productId: item.id,
+      productId: item._id,
       name: item.name,
       price: item.price,
       quantity: 1,
-      size: "Medium", 
-      color: "Standard",
-      img: item.img,
+      size: item.sizes?.[0] || "Medium", 
+      color: item.colors?.[0] || "Standard",
+      img: item.image,
     });
 
     setTimeout(() => {
       setLoadingId(null);
-      setAddedId(item.id);
+      setAddedId(item._id);
       setTimeout(() => setAddedId(null), 2000);
     }, 500);
   };
+
+  if (isLoading || !heroProduct) {
+    return (
+      <section className="py-16 max-w-8xl mx-auto px-4">
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className={`${i === 0 ? "col-span-2 lg:col-span-1 aspect-[4/5]" : "aspect-square"} bg-gray-200 animate-pulse rounded-xl`} />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 max-w-8xl mx-auto">
@@ -95,7 +141,7 @@ const FeaturedProductsSection = () => {
         <div className="relative group w-full aspect-[4/5] lg:aspect-auto lg:h-full overflow-hidden rounded-xl bg-gray-100">
            <Link href={`/product/${heroProduct.slug}`} className="block h-full w-full">
              <Image
-               src={heroProduct.img}
+               src={heroProduct.image}
                alt={heroProduct.name}
                fill
                className="object-cover object-center transition-transform duration-1000 group-hover:scale-105"
@@ -123,11 +169,11 @@ const FeaturedProductsSection = () => {
         {/* === 2. GRID PRODUCTS === */}
         <div className="grid grid-cols-2 gap-4 h-auto lg:h-full">
           {gridProducts.map((item) => (
-            <div key={item.id} className="group relative flex flex-col aspect-square lg:aspect-auto lg:h-full bg-gray-50 rounded-xl overflow-hidden">
+            <div key={item._id} className="group relative flex flex-col aspect-square lg:aspect-auto lg:h-full bg-gray-50 rounded-xl overflow-hidden">
               
               <Link href={`/product/${item.slug}`} className="relative block flex-1 overflow-hidden h-full">
                 <Image
-                  src={item.img}
+                  src={item.image}
                   alt={item.name}
                   fill
                   className="object-cover object-center transition-transform duration-700 group-hover:scale-110"

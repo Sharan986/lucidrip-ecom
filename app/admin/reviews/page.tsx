@@ -1,273 +1,235 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { motion } from "framer-motion";
 import { 
-  HiStar, 
-  HiOutlineStar, 
-  HiCheck, 
-  HiXMark, 
-  HiOutlineTrash,
   HiOutlineMagnifyingGlass,
-  HiOutlineFunnel,
-  HiOutlineChatBubbleLeftRight
+  HiOutlineCheck,
+  HiOutlineXMark,
+  HiOutlineStar
 } from "react-icons/hi2";
 
 // --- TYPES ---
-type ReviewStatus = "Published" | "Pending" | "Rejected";
-
 interface Review {
   id: string;
-  product: { name: string; img: string; slug: string };
-  customer: { name: string; email: string };
+  customer: string;
+  product: string;
+  productImg: string;
   rating: number;
+  title: string;
   comment: string;
+  status: "Pending" | "Approved" | "Rejected";
   date: string;
-  status: ReviewStatus;
 }
 
 // --- MOCK DATA ---
-const REVIEWS: Review[] = [
-  {
-    id: "REV-001",
-    product: { name: "Oversized Street Hoodie", img: "/Hero/Product1.avif", slug: "oversized-hoodie" },
-    customer: { name: "Sumit Mehta", email: "sumit@gmail.com" },
-    rating: 5,
-    comment: "Absolutely love the fit! The fabric is heavy and feels premium. Definitely buying another color.",
-    date: "2 hours ago",
-    status: "Pending"
-  },
-  {
-    id: "REV-002",
-    product: { name: "Classic Beige Knit", img: "/Hero/Product2.avif", slug: "beige-knit" },
-    customer: { name: "Priya Singh", email: "priya@yahoo.com" },
-    rating: 4,
-    comment: "Good quality but the size runs a bit large. I suggest sizing down.",
-    date: "1 day ago",
-    status: "Published"
-  },
-  {
-    id: "REV-003",
-    product: { name: "Tactical Cargo Pant", img: "/Hero/Product3.avif", slug: "cargo-pant" },
-    customer: { name: "Rahul Verma", email: "rahul@tech.in" },
-    rating: 1,
-    comment: "Terrible experience. The stitching came off after one wash. Want a refund immediately.",
-    date: "2 days ago",
-    status: "Pending" // Needs attention
-  },
-  {
-    id: "REV-004",
-    product: { name: "Graphic Print Tee", img: "/Hero/Product4.avif", slug: "graphic-tee" },
-    customer: { name: "Anjali Roy", email: "anjali@art.com" },
-    rating: 5,
-    comment: "Print quality is amazing. Fast delivery too!",
-    date: "3 days ago",
-    status: "Published"
-  },
-  {
-    id: "REV-005",
-    product: { name: "Oversized Street Hoodie", img: "/Hero/Product1.avif", slug: "oversized-hoodie" },
-    customer: { name: "Bot User", email: "bot@spam.com" },
-    rating: 5,
-    comment: "Click here for free coins: http://spam-link.com",
-    date: "1 week ago",
-    status: "Rejected"
-  }
+const INITIAL_REVIEWS: Review[] = [
+  { id: "REV-001", customer: "Aarav Sharma", product: "Oversized Street Hoodie", productImg: "/Hero/Product1.avif", rating: 5, title: "Perfect fit!", comment: "Amazing quality and the fit is exactly as described. Will definitely buy more.", status: "Approved", date: "May 12, 2024" },
+  { id: "REV-002", customer: "Priya Patel", product: "Classic Beige Knit", productImg: "/Hero/Product2.avif", rating: 4, title: "Great material", comment: "Love the softness of the fabric. Slightly longer than expected but still looks great.", status: "Pending", date: "May 11, 2024" },
+  { id: "REV-003", customer: "Rahul Verma", product: "Tactical Cargo Pant", productImg: "/Hero/Product3.avif", rating: 2, title: "Sizing issues", comment: "The size chart was misleading. Had to return.", status: "Pending", date: "May 10, 2024" },
+  { id: "REV-004", customer: "Neha Singh", product: "Graphic Print Tee", productImg: "/Hero/Product4.avif", rating: 5, title: "Love it!", comment: "The print quality is excellent and hasn't faded after multiple washes.", status: "Approved", date: "May 09, 2024" },
+  { id: "REV-005", customer: "Vikram Mehta", product: "Utility Bomber Jacket", productImg: "/Hero/Product1.avif", rating: 1, title: "Disappointed", comment: "Color was different from photos. Poor quality stitching.", status: "Rejected", date: "May 08, 2024" },
 ];
 
-export default function ReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>(REVIEWS);
-  const [filterStatus, setFilterStatus] = useState("All");
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    Approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Pending: "bg-amber-50 text-amber-700 border-amber-200",
+    Rejected: "bg-red-50 text-red-700 border-red-200",
+  };
 
-  // --- ACTIONS ---
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 text-[10px] tracking-[0.1em] uppercase border ${styles[status]}`}>
+      {status}
+    </span>
+  );
+};
+
+const StarRating = ({ rating }: { rating: number }) => (
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <HiOutlineStar 
+        key={star} 
+        className={`w-4 h-4 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-neutral-200'}`} 
+      />
+    ))}
+  </div>
+);
+
+export default function ReviewsPage() {
+  const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+
   const handleApprove = (id: string) => {
-    setReviews(reviews.map(r => r.id === id ? { ...r, status: "Published" } : r));
+    setReviews(reviews.map(r => r.id === id ? { ...r, status: "Approved" } : r));
   };
 
   const handleReject = (id: string) => {
     setReviews(reviews.map(r => r.id === id ? { ...r, status: "Rejected" } : r));
   };
 
-  const handleDelete = (id: string) => {
-    if(confirm("Delete this review permanently?")) {
-      setReviews(reviews.filter(r => r.id !== id));
-    }
-  };
+  const filteredReviews = useMemo(() => {
+    return reviews.filter(review => {
+      const matchesSearch = review.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            review.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            review.comment.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "All" || review.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [reviews, searchQuery, statusFilter]);
 
-  // --- FILTERS ---
-  const filteredReviews = reviews.filter(r => filterStatus === "All" || r.status === filterStatus);
-
-  // --- HELPER: STAR RATING ---
-  const StarRating = ({ rating }: { rating: number }) => {
-    return (
-      <div className="flex text-yellow-400 text-xs">
-        {[...Array(5)].map((_, i) => (
-          i < rating ? <HiStar key={i} /> : <HiOutlineStar key={i} className="text-zinc-300" />
-        ))}
-      </div>
-    );
-  };
+  const stats = useMemo(() => ({
+    total: reviews.length,
+    pending: reviews.filter(r => r.status === "Pending").length,
+    avgRating: (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1),
+    fiveStars: reviews.filter(r => r.rating === 5).length
+  }), [reviews]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20 font-sans text-zinc-900">
+    <div className="space-y-6">
       
       {/* --- HEADER --- */}
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-8">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Reviews</h1>
-            <p className="text-sm text-zinc-500 mt-1">Moderate user feedback and track product sentiment.</p>
-          </div>
-          <div className="flex gap-4">
-             {/* Quick Stats */}
-             <div className="bg-white border border-zinc-200 px-4 py-2 rounded-lg shadow-sm flex items-center gap-3">
-                <div>
-                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Avg Rating</p>
-                   <div className="flex items-center gap-1">
-                      <HiStar className="text-yellow-400 text-sm" />
-                      <span className="font-mono font-bold text-sm">4.2</span>
-                   </div>
-                </div>
-                <div className="w-px h-8 bg-zinc-100"></div>
-                <div>
-                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Pending</p>
-                   <span className="font-mono font-bold text-sm text-yellow-600">{reviews.filter(r => r.status === 'Pending').length}</span>
-                </div>
-             </div>
+      <div>
+        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 mb-2">
+          Moderation
+        </p>
+        <h1 className="text-2xl font-extralight text-neutral-900">
+          <span className="italic">Reviews</span>
+        </h1>
+      </div>
+
+      {/* --- STATS --- */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <div className="border border-neutral-200 bg-white p-5">
+          <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-400 mb-2">Total Reviews</p>
+          <p className="text-2xl font-light text-neutral-900">{stats.total}</p>
+        </div>
+        <div className="border border-neutral-200 bg-white p-5">
+          <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-400 mb-2">Pending</p>
+          <p className="text-2xl font-light text-amber-600">{stats.pending}</p>
+        </div>
+        <div className="border border-neutral-200 bg-white p-5">
+          <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-400 mb-2">Avg. Rating</p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-light text-neutral-900">{stats.avgRating}</p>
+            <HiOutlineStar className="w-5 h-5 fill-amber-400 text-amber-400" />
           </div>
         </div>
+        <div className="border border-neutral-200 bg-white p-5">
+          <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-400 mb-2">5-Star Reviews</p>
+          <p className="text-2xl font-light text-emerald-600">{stats.fiveStars}</p>
+        </div>
+      </motion.div>
 
-        {/* --- MAIN CONTENT --- */}
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
-          
-          {/* Toolbar */}
-          <div className="px-6 py-4 border-b border-zinc-100 flex justify-between items-center bg-white">
-             <div className="flex bg-zinc-100 p-1 rounded-lg">
-                {["All", "Pending", "Published", "Rejected"].map((status) => (
-                   <button
-                     key={status}
-                     onClick={() => setFilterStatus(status)}
-                     className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${
-                       filterStatus === status ? "bg-white text-black shadow-sm" : "text-zinc-500 hover:text-black"
-                     }`}
-                   >
-                     {status}
-                   </button>
-                ))}
-             </div>
-             
-             <div className="relative w-64">
-                <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input 
-                  placeholder="Search reviews..." 
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-black transition"
-                />
-             </div>
-          </div>
+      {/* --- FILTERS --- */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex border border-neutral-200">
+          {["All", "Pending", "Approved", "Rejected"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              className={`px-4 py-2 text-[10px] tracking-[0.1em] uppercase transition-all ${
+                statusFilter === tab 
+                  ? "bg-neutral-900 text-white" 
+                  : "text-neutral-500 hover:text-neutral-900"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-             <table className="w-full text-left border-collapse">
-                <thead className="bg-zinc-50 border-b border-zinc-100">
-                   <tr>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest w-64">Product</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest w-48">Customer</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest w-32">Rating</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Comment</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest w-32">Status</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                   </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                   {filteredReviews.map((review) => (
-                      <tr key={review.id} className="group hover:bg-zinc-50 transition-colors">
-                         
-                         {/* Product Info */}
-                         <td className="px-6 py-4 align-top">
-                            <div className="flex gap-3">
-                               <div className="w-10 h-12 relative bg-zinc-100 rounded border border-zinc-200 overflow-hidden shrink-0">
-                                  <Image src={review.product.img} alt={review.product.name} fill className="object-cover" />
-                               </div>
-                               <div>
-                                  <p className="text-xs font-bold text-zinc-900 line-clamp-1">{review.product.name}</p>
-                                  <Link href={`/product/${review.product.slug}`} className="text-[10px] text-blue-600 hover:underline">View Product</Link>
-                               </div>
-                            </div>
-                         </td>
-
-                         {/* Customer Info */}
-                         <td className="px-6 py-4 align-top">
-                            <p className="text-sm font-bold text-zinc-900">{review.customer.name}</p>
-                            <p className="text-xs text-zinc-500">{review.customer.email}</p>
-                         </td>
-
-                         {/* Rating */}
-                         <td className="px-6 py-4 align-top">
-                            <StarRating rating={review.rating} />
-                            <p className="text-[10px] text-zinc-400 mt-1">{review.date}</p>
-                         </td>
-
-                         {/* Comment */}
-                         <td className="px-6 py-4 align-top">
-                            <p className="text-sm text-zinc-700 leading-relaxed italic">"{review.comment}"</p>
-                         </td>
-
-                         {/* Status */}
-                         <td className="px-6 py-4 align-top">
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                               review.status === "Published" ? "bg-green-50 text-green-700 border-green-200" :
-                               review.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                               "bg-red-50 text-red-700 border-red-200"
-                            }`}>
-                               {review.status === "Pending" && <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1.5 animate-pulse"></span>}
-                               {review.status}
-                            </span>
-                         </td>
-
-                         {/* Actions */}
-                         <td className="px-6 py-4 align-top text-right">
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               {review.status === "Pending" && (
-                                  <>
-                                    <button 
-                                      onClick={() => handleApprove(review.id)}
-                                      className="p-1.5 bg-white border border-zinc-200 text-green-600 rounded hover:bg-green-50 hover:border-green-200 transition shadow-sm" 
-                                      title="Approve"
-                                    >
-                                       <HiCheck className="text-lg" />
-                                    </button>
-                                    <button 
-                                      onClick={() => handleReject(review.id)}
-                                      className="p-1.5 bg-white border border-zinc-200 text-red-600 rounded hover:bg-red-50 hover:border-red-200 transition shadow-sm" 
-                                      title="Reject"
-                                    >
-                                       <HiXMark className="text-lg" />
-                                    </button>
-                                  </>
-                               )}
-                               <button className="p-1.5 text-zinc-400 hover:text-black transition" title="Delete">
-                                  <HiOutlineTrash className="text-lg" />
-                               </button>
-                            </div>
-                         </td>
-
-                      </tr>
-                   ))}
-                   
-                   {filteredReviews.length === 0 && (
-                      <tr>
-                         <td colSpan={6} className="px-6 py-20 text-center">
-                            <p className="text-zinc-400 text-sm">No reviews found in this category.</p>
-                         </td>
-                      </tr>
-                   )}
-                </tbody>
-             </table>
-          </div>
-
+        <div className="relative w-full sm:w-56">
+          <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4" />
+          <input 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search reviews..." 
+            className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 text-xs font-light focus:outline-none focus:border-neutral-900 transition"
+          />
         </div>
       </div>
+
+      {/* --- REVIEWS LIST --- */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="space-y-4"
+      >
+        {filteredReviews.map((review, i) => (
+          <motion.div
+            key={review.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.03 }}
+            className="border border-neutral-200 bg-white p-5"
+          >
+            <div className="flex gap-4">
+              {/* Product Image */}
+              <div className="relative w-16 h-20 bg-neutral-100 flex-shrink-0">
+                <Image 
+                  src={review.productImg} 
+                  alt={review.product} 
+                  fill 
+                  className="object-cover" 
+                />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                  <div>
+                    <p className="text-sm font-light text-neutral-900">{review.customer}</p>
+                    <p className="text-[11px] text-neutral-500">{review.product}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={review.status} />
+                    <span className="text-[11px] text-neutral-400">{review.date}</span>
+                  </div>
+                </div>
+
+                <div className="mb-2">
+                  <StarRating rating={review.rating} />
+                </div>
+
+                <p className="text-sm font-medium text-neutral-900 mb-1">{review.title}</p>
+                <p className="text-sm font-light text-neutral-600 line-clamp-2">{review.comment}</p>
+
+                {/* Actions for Pending */}
+                {review.status === "Pending" && (
+                  <div className="flex gap-2 mt-4">
+                    <button 
+                      onClick={() => handleApprove(review.id)}
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] tracking-[0.1em] uppercase hover:bg-emerald-700 transition flex items-center gap-1"
+                    >
+                      <HiOutlineCheck className="w-3 h-3" /> Approve
+                    </button>
+                    <button 
+                      onClick={() => handleReject(review.id)}
+                      className="px-3 py-1.5 border border-red-200 text-red-600 text-[10px] tracking-[0.1em] uppercase hover:bg-red-50 transition flex items-center gap-1"
+                    >
+                      <HiOutlineXMark className="w-3 h-3" /> Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        ))}
+
+        {filteredReviews.length === 0 && (
+          <div className="text-center py-16 border border-neutral-200 bg-white">
+            <p className="text-sm font-light text-neutral-500">No reviews found</p>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }

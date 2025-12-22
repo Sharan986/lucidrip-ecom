@@ -1,105 +1,109 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCartStore } from "@/store/useCartStore";
 import { useCheckoutStepStore } from "@/store/checkoutStepStore";
-// Icons
-import { HiArrowRight, HiOutlineShoppingBag } from "react-icons/hi2";
+import { motion } from "framer-motion";
+import { HiArrowRight } from "react-icons/hi2";
 
 export default function CartReview() {
   const { items, getCartTotal } = useCartStore();
   const { nextStep } = useCheckoutStepStore();
 
-  // Calculate Totals Logic (Same as Cart Page)
   const subtotal = getCartTotal();
-  const shippingCost = subtotal > 200 ? 0 : 15; // Free shipping over $200
+  const shippingCost = subtotal > 2500 ? 0 : 150;
   const total = subtotal + shippingCost;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-10">
-      
-      {/* --- Header --- */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-2 bg-gray-100 rounded-full">
-           <HiOutlineShoppingBag className="text-xl text-gray-700" />
-        </div>
-        <div>
-            <h2 className="text-2xl font-bold text-gray-900">Order Summary</h2>
-            <p className="text-sm text-gray-500">Review your items before shipping</p>
-        </div>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="border border-neutral-100"
+    >
+      {/* Header */}
+      <div className="p-6 md:p-8 border-b border-neutral-100">
+        <p className="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-2">Step 1</p>
+        <h2 className="text-2xl font-extralight tracking-tight">
+          Order <span className="italic">Summary</span>
+        </h2>
       </div>
 
-      {/* --- Items List --- */}
-      <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200">
-        {items.map((item) => (
-          <div
+      {/* Items List */}
+      <div className="max-h-[400px] overflow-y-auto">
+        {items.map((item, index) => (
+          <motion.div
             key={item.uniqueId}
-            className="flex gap-4 items-start border-b border-gray-50 pb-6 last:border-0 last:pb-0"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="flex gap-4 p-6 md:p-8 border-b border-neutral-50 last:border-0"
           >
-            {/* Image Thumbnail */}
-            <div className="relative w-20 h-24 shrink-0 bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
+            {/* Image */}
+            <Link 
+              href={`/product/${item.slug || '#'}`}
+              className="relative w-20 h-24 flex-shrink-0 bg-neutral-50 overflow-hidden group"
+            >
               <Image 
                 src={item.img} 
                 alt={item.name} 
                 fill 
-                className="object-cover" 
+                className="object-cover transition-transform duration-500 group-hover:scale-105" 
               />
-            </div>
+            </Link>
 
             {/* Details */}
-            <div className="flex-1">
-              <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-base">{item.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {item.size} <span className="text-gray-300 mx-1">|</span> {item.color}
-                    </p>
-                    <div className="mt-2 inline-flex items-center px-2 py-1 bg-gray-50 rounded-md text-xs font-medium text-gray-600 border border-gray-100">
-                        Qty: {item.quantity}
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900">
-                       ₹{(item.price * item.quantity).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                       ₹{item.price} each
-                    </p>
-                  </div>
+            <div className="flex-1 flex flex-col justify-between min-w-0">
+              <div>
+                <Link href={`/product/${item.slug || '#'}`}>
+                  <h3 className="text-sm tracking-wide text-neutral-900 hover:underline underline-offset-4 decoration-neutral-300 truncate">
+                    {item.name}
+                  </h3>
+                </Link>
+                <p className="text-xs tracking-[0.1em] text-neutral-400 mt-1 uppercase">
+                  {item.size} · {item.color}
+                </p>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-neutral-400">Qty: {item.quantity}</span>
+                <span className="text-sm font-medium">₹{(item.price * item.quantity).toLocaleString()}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      {/* --- Cost Breakdown --- */}
-      <div className="bg-gray-50 rounded-xl p-6 mb-8">
-          <div className="flex justify-between items-center mb-3 text-gray-600 text-sm">
-             <span>Subtotal</span>
-             <span className="font-medium text-gray-900">₹{subtotal.toLocaleString()}</span>
+      {/* Cost Breakdown */}
+      <div className="p-6 md:p-8 bg-neutral-50 border-t border-neutral-100">
+        <div className="space-y-3 mb-6">
+          <div className="flex justify-between text-sm">
+            <span className="text-neutral-500">Subtotal</span>
+            <span className="text-neutral-900">₹{subtotal.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between items-center mb-4 text-gray-600 text-sm">
-             <span>Shipping</span>
-             <span className={shippingCost === 0 ? "text-green-600 font-medium" : "font-medium text-gray-900"}>
-                {shippingCost === 0 ? "Free" : `₹${shippingCost}`}
-             </span>
+          <div className="flex justify-between text-sm">
+            <span className="text-neutral-500">Shipping</span>
+            <span className={shippingCost === 0 ? "text-emerald-600" : "text-neutral-900"}>
+              {shippingCost === 0 ? "Complimentary" : `₹${shippingCost}`}
+            </span>
           </div>
-          <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
-             <span className="font-bold text-lg text-gray-900">Total</span>
-             <span className="font-bold text-xl text-gray-900">₹{total.toLocaleString()}</span>
-          </div>
+        </div>
+        <div className="pt-4 border-t border-neutral-200 flex justify-between items-baseline">
+          <span className="text-sm tracking-wide">Total</span>
+          <span className="text-xl font-extralight">₹{total.toLocaleString()}</span>
+        </div>
       </div>
 
-      {/* --- Action Button --- */}
-      <button
-        onClick={nextStep}
-        className="w-full flex items-center justify-center gap-2 bg-black text-white py-4 rounded-xl font-medium text-lg hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-      >
-        <span>Continue to Shipping</span>
-        <HiArrowRight />
-      </button>
-      
-    </div>
+      {/* Action Button */}
+      <div className="p-6 md:p-8 border-t border-neutral-100">
+        <button
+          onClick={nextStep}
+          className="group w-full flex items-center justify-center gap-3 py-4 bg-black text-white text-xs tracking-[0.2em] uppercase hover:bg-neutral-800 transition-colors"
+        >
+          <span>Continue to Shipping</span>
+          <HiArrowRight className="text-sm transition-transform group-hover:translate-x-1" />
+        </button>
+      </div>
+    </motion.div>
   );
 }
